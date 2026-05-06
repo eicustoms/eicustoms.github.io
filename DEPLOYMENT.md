@@ -6,7 +6,7 @@ This guide explains how to deploy your watch site backend + frontend to Railway 
 
 - GitHub account (fork/push your repo there)
 - Railway account (free: https://railway.app)
-- Gmail account (for email notifications - optional)
+- Gmail acount (for email notifications - optional)
 
 ---
 
