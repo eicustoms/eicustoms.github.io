@@ -61,8 +61,10 @@ Received at: ${submission.receivedAt}
 
 app.post('/api/contact', (req, res) => {
   const submission = {
+    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
     ...req.body,
-    receivedAt: new Date().toISOString()
+    receivedAt: new Date().toISOString(),
+    status: 'pending'
   };
 
   let submissions = [];
@@ -122,6 +124,76 @@ app.get('/admin/api/submissions', (req, res) => {
   } catch (error) {
     console.error('Failed to load submissions:', error);
     res.status(500).json({ error: 'Failed to load submissions' });
+  }
+});
+
+// Update submission status
+app.patch('/admin/api/submissions/:id', (req, res) => {
+  const token = req.headers.authorization;
+  
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!['pending', 'in-progress', 'completed'].includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
+  try {
+    let submissions = [];
+    if (fs.existsSync(submissionsFile)) {
+      const raw = fs.readFileSync(submissionsFile, 'utf8');
+      submissions = raw ? JSON.parse(raw) : [];
+    }
+
+    const submissionIndex = submissions.findIndex(s => s.id === id);
+    if (submissionIndex === -1) {
+      return res.status(404).json({ error: 'Submission not found' });
+    }
+
+    submissions[submissionIndex].status = status;
+    fs.writeFileSync(submissionsFile, JSON.stringify(submissions, null, 2));
+
+    res.json({ status: 'ok', submission: submissions[submissionIndex] });
+  } catch (error) {
+    console.error('Failed to update submission:', error);
+    res.status(500).json({ error: 'Failed to update submission' });
+  }
+});
+
+// Delete submission
+app.delete('/admin/api/submissions/:id', (req, res) => {
+  const token = req.headers.authorization;
+  
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { id } = req.params;
+
+  try {
+    let submissions = [];
+    if (fs.existsSync(submissionsFile)) {
+      const raw = fs.readFileSync(submissionsFile, 'utf8');
+      submissions = raw ? JSON.parse(raw) : [];
+    }
+
+    const submissionIndex = submissions.findIndex(s => s.id === id);
+    if (submissionIndex === -1) {
+      return res.status(404).json({ error: 'Submission not found' });
+    }
+
+    const deletedSubmission = submissions.splice(submissionIndex, 1);
+    fs.writeFileSync(submissionsFile, JSON.stringify(submissions, null, 2));
+
+    console.log('Deleted submission:', deletedSubmission[0].name);
+    res.json({ status: 'ok' });
+  } catch (error) {
+    console.error('Failed to delete submission:', error);
+    res.status(500).json({ error: 'Failed to delete submission' });
   }
 });
 
