@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel | Ethan & Isaac Customs</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-container.hidden {
+            display: none;
+        }
+
+        .login-container h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .login-container input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .login-container button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .login-container button:hover {
+            background: #764ba2;
+        }
+
+        .login-error {
+            color: #d32f2f;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .admin-panel {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        .admin-panel.hidden {
+            display: none;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 20px;
+        }
+
+        .admin-header h1 {
+            color: #333;
+        }
+
+        .logout-btn {
+            background: #d32f2f;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #b71c1c;
+        }
+
+        .submissions-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .submission {
+            background: #f5f5f5;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #667eea;
+        }
+
+        .submission h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .submission p {
+            color: #666;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .submission .timestamp {
+            color: #999;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .custom-details {
+            background: white;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 3px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .no-submissions {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-size: 18px;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Form -->
+    <div class="login-container" id="loginContainer">
+        <h1>Admin Login</h1>
+        <div class="login-error" id="loginError"></div>
+        <form id="loginForm">
+            <input type="password" id="passwordInput" placeholder="Enter admin password" required>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+
+    <!-- Admin Panel -->
+    <div class="admin-panel hidden" id="adminPanel">
+        <div class="admin-header">
+            <h1>Contact Submissions</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+        <div class="submissions-container" id="submissionsContainer">
+            <div class="loading">Loading submissions...</div>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
