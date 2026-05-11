@@ -24,6 +24,26 @@ document.addEventListener('DOMContentLoaded', () => {
         nav.classList.toggle('is-active');
     });
 
+    // Close mobile menu when a link is clicked
+    const navItems = nav.querySelectorAll('a');
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            hamburgerButton.classList.remove('is-active');
+            nav.classList.remove('is-active');
+        });
+    });
+
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', (e) => {
+        const isClickInsideNav = nav.contains(e.target);
+        const isClickOnHamburger = hamburgerButton.contains(e.target);
+        
+        if (!isClickInsideNav && !isClickOnHamburger && nav.classList.contains('is-active')) {
+            hamburgerButton.classList.remove('is-active');
+            nav.classList.remove('is-active');
+        }
+    });
+
     // --- Header Scroll Effect ---
     // Function to add/remove the 'scrolled' class
     const handleHeaderScroll = () => {
