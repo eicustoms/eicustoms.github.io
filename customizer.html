@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Customizer | Ethan & Isaac Customs</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="full-page-layout">
+
+    <header>
+        <div class="container">
+            <a href="index.html" class="logo">
+                <img src="images/logo.png" alt="Ethan & Isaac Customs Logo">
+            </a>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="services.html">Services</a></li>
+                    <li><a href="gallery.html">Gallery</a></li>
+                    <li><a href="about.html">About</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="customizer-hero">
+            <div class="container">
+                <h1>Build Your Custom Timepiece</h1>
+                <p>Choose premium finishes, dial styles, and straps with a polished preview that updates live.</p>
+            </div>
+        </section>
+
+        <section id="watch-builder">
+            <div class="container">
+                <div class="customizer-intro">
+                    <p>Use the controls below to mix and match materials and design a watch that matches your style.</p>
+                </div>
+
+                <div class="customizer-interface">
+                    <div class="watch-panel">
+                        <div class="watch-display">
+                            <div class="watch-strap top leather"></div>
+                            <div class="watch-strap bottom leather"></div>
+                            <div class="watch-case steel">
+                                <div class="watch-dial white">
+                                    <div class="watch-hand hour"></div>
+                                    <div class="watch-hand minute"></div>
+                                    <div class="watch-center"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="watch-summary">
+                            <h3>Your current design</h3>
+                            <ul>
+                                <li>Case: <span id="summary-case">Oystersteel</span></li>
+                                <li>Bezel: <span id="summary-bezel">Smooth</span></li>
+                                <li>Dial: <span id="summary-dial">White</span></li>
+                                <li>Strap: <span id="summary-strap">Leather</span></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <aside class="customization-options">
+                        <h2>Customizer Controls</h2>
+                        <p class="customizer-note">Pick one option from each section to preview it on the watch.</p>
+
+                        <fieldset>
+                            <legend>Case Material</legend>
+                            <div class="option-grid">
+                                <input id="case-steel" type="radio" name="case" value="steel" checked>
+                                <label for="case-steel">Oystersteel</label>
+                                <input id="case-gold" type="radio" name="case" value="gold">
+                                <label for="case-gold">Yellow Gold</label>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>Bezel</legend>
+                            <div class="option-grid">
+                                <input id="bezel-smooth" type="radio" name="bezel" value="smooth" checked>
+                                <label for="bezel-smooth">Smooth</label>
+                                <input id="bezel-fluted" type="radio" name="bezel" value="fluted">
+                                <label for="bezel-fluted">Fluted</label>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>Dial Color</legend>
+                            <div class="option-grid">
+                                <input id="dial-white" type="radio" name="dial" value="white" checked>
+                                <label for="dial-white">White</label>
+                                <input id="dial-black" type="radio" name="dial" value="black">
+                                <label for="dial-black">Black</label>
+                            </div>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>Strap</legend>
+                            <div class="option-grid">
+                                <input id="strap-leather" type="radio" name="strap" value="leather" checked>
+                                <label for="strap-leather">Leather</label>
+                                <input id="strap-metal" type="radio" name="strap" value="metal">
+                                <label for="strap-metal">Jubilee</label>
+                            </div>
+                        </fieldset>
+
+                        <div class="build-actions">
+                            <a id="quote-link" href="contact.html" class="cta-button">Request a quote</a>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Ethan & Isaac Customs. All Rights Reserved. Website created by SYF Studios.</p>
+        </div>
+    </footer>
+
+    <!-- Link to the customizer JavaScript file -->
+    <script src="customizer.js"></script>
+
+</body>
+</html>
