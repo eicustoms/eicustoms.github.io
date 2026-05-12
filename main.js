@@ -15,24 +15,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const hamburgerButton = document.querySelector('.hamburger-menu');
   const nav = document.getElementById('main-nav');
-  const navUl = nav.querySelector('ul');
+  const navUl = nav ? nav.querySelector('ul') : null;
   const header = document.querySelector('header');
 
+  if (!hamburgerButton || !nav || !navUl) {
+    console.error('Menu elements not found');
+    return;
+  }
+
   // --- Hamburger Menu Logic ---
-  hamburgerButton.addEventListener('click', () => {
-    // Toggle the 'is-active' class on all elements
+  hamburgerButton.addEventListener('click', (e) => {
+    e.stopPropagation();
     hamburgerButton.classList.toggle('is-active');
-    nav.classList.toggle('is-active');
     navUl.classList.toggle('is-active');
+    hamburgerButton.setAttribute('aria-expanded', navUl.classList.contains('is-active'));
   });
 
   // Close mobile menu when a link is clicked
-  const navItems = nav.querySelectorAll('a');
+  const navItems = navUl.querySelectorAll('a');
   navItems.forEach(item => {
     item.addEventListener('click', () => {
       hamburgerButton.classList.remove('is-active');
-      nav.classList.remove('is-active');
       navUl.classList.remove('is-active');
+      hamburgerButton.setAttribute('aria-expanded', 'false');
     });
   });
 
@@ -43,15 +48,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (!isClickInsideNav && !isClickOnHamburger && navUl.classList.contains('is-active')) {
       hamburgerButton.classList.remove('is-active');
-      nav.classList.remove('is-active');
       navUl.classList.remove('is-active');
+      hamburgerButton.setAttribute('aria-expanded', 'false');
     }
   });
 
   // --- Header Scroll Effect ---
-  // Function to add/remove the 'scrolled' class
   const handleHeaderScroll = () => {
-    // Add 'scrolled' class if user has scrolled more than 10px, otherwise remove it
     if (window.scrollY > 10) {
       header.classList.add('scrolled');
     } else {
@@ -59,6 +62,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Listen for the scroll event on the window
   window.addEventListener('scroll', handleHeaderScroll);
 });
