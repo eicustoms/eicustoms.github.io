@@ -142,6 +142,7 @@ header ul {
     padding: 10px;
     position: absolute; /* Take hamburger out of flex flow */
     z-index: 1010; /* Ensure it's above the nav */
+    right: 1rem;
 }
 
 .hamburger-menu span {
@@ -162,7 +163,7 @@ header ul {
 .hero {
     /* You would add a background image of a watch here */
       /* 1. Add the background image with a semi-transparent dark overlay for text readability */
-    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('images/herowatch.jpg');/*https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=2070&auto=format&fit=crop');*/
+    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('images/herowatch.jpg');/*https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=2070&auto=format&f[...]
     
     /* 2. Ensure the image covers the whole section and is centered */
     background-size: cover;
@@ -707,180 +708,6 @@ a.service-link {
     width: auto;
 }
 
-.quote-details {
-    margin: 1.5rem 0;
-    padding: 1.25rem 1.5rem;
-    border-radius: 20px;
-    background: #f7f8fb;
-    border: 1px solid #e4eaef;
-}
-
-.quote-details h3 {
-    margin-top: 0;
-    font-size: 1rem;
-    color: #263238;
-}
-
-.thank-you-message {
-    display: none;
-    margin-top: 1.5rem;
-    padding: 1.5rem;
-    border-radius: 20px;
-    background: #eaf6ed;
-    border: 1px solid #c7e4cf;
-    color: #223a24;
-}
-
-.thank-you-message.is-visible {
-    display: block;
-}
-
-.customizer-hero {
-    background: #fff8ed;
-    color: #263238;
-    text-align: center;
-    padding: 3rem 0;
-}
-
-.customizer-hero p {
-    max-width: 760px;
-    margin: 0.75rem auto 0;
-    color: #556872;
-    font-size: 1.05rem;
-}
-
-.customizer-intro {
-    text-align: center;
-    margin-bottom: 2rem;
-    color: #546e7a;
-}
-
-.watch-panel {
-    background: #fff;
-    border-radius: 30px;
-    padding: 2rem;
-    box-shadow: 0 22px 55px rgba(17,24,39,0.08);
-}
-
-.watch-summary {
-    margin-top: 1.75rem;
-    padding: 1.5rem;
-    border-radius: 22px;
-    background: #f8fafb;
-    border: 1px solid #e4e9ef;
-}
-
-.watch-summary h3 {
-    margin: 0 0 1rem;
-    font-size: 1.1rem;
-    color: #263238;
-}
-
-.watch-summary ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.watch-summary ul li {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid #e7eef3;
-    color: #455a6b;
-}
-
-.watch-summary ul li:last-child {
-    border-bottom: none;
-}
-
-.build-actions {
-    margin-top: 1.5rem;
-    text-align: center;
-}
-
-.build-actions .cta-button {
-    width: 100%;
-}
-
-.contact-content {
-    padding: 4rem 0;
-    background: #fff;
-}
-
-.contact-grid {
-    display: grid;
-    grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.1fr);
-    gap: 2rem;
-    align-items: start;
-}
-
-.contact-card {
-    background: #ffffff;
-    border-radius: 24px;
-    padding: 2rem;
-    box-shadow: 0 16px 35px rgba(17,24,39,0.06);
-}
-
-.contact-card h2 {
-    margin-top: 0;
-}
-
-.contact-list {
-    list-style: none;
-    padding: 0;
-    margin: 1.5rem 0 1rem;
-}
-
-.contact-list li {
-    margin-bottom: 1rem;
-    color: #455a6b;
-}
-
-.contact-list a {
-    color: #263238;
-    text-decoration: none;
-    border-bottom: 1px solid rgba(38,50,56,0.15);
-}
-
-.contact-form {
-    display: grid;
-    gap: 1rem;
-}
-
-.contact-form .form-row {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
-}
-
-.contact-form label {
-    font-weight: 600;
-    color: #263238;
-    display: block;
-}
-
-.contact-form input,
-.contact-form textarea {
-    width: 100%;
-    border: 1px solid #dee4ea;
-    border-radius: 16px;
-    padding: 0.95rem 1rem;
-    font: inherit;
-    color: #263238;
-    background: #f9fbfd;
-}
-
-.contact-form textarea {
-    min-height: 180px;
-    resize: vertical;
-}
-
-.contact-form button {
-    align-self: start;
-    width: auto;
-}
-
 /* --- About Page Styles --- */
 .about-hero {
     background: #263238; /* Deep Charcoal */
@@ -1002,207 +829,38 @@ a.service-link {
 
 .gallery-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1rem;
-}
-
-.gallery-item {
-    overflow: hidden;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.07);
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
 }
 
 .gallery-item img {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    transition: transform 0.3s ease-in-out;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease-in-out;
 }
 
-.gallery-item:hover img {
-    transform: scale(1.05);
+.gallery-item img:hover {
+    transform: scale(1.02);
 }
 
-@media (max-width: 768px) {
-    .gallery-grid {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    }
-}
-
-/* --- Services Page Styles --- */
-.services-hero {
-    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('placeholder-for-services-hero.jpg');
-    background-size: cover;
-    background-position: center;
+/* Footer Styles */
+footer {
+    background: #263238; /* Deep Charcoal */
     color: #fff;
     text-align: center;
-    padding: 4rem 0;
+    padding: 2rem 0;
+    margin-top: 4rem;
 }
 
-.services-hero h1 {
-    font-size: 2.8rem;
+footer p {
     margin: 0;
+    font-size: 0.95rem;
 }
 
-.services-content {
-    padding: 4rem 0;
-}
-
-.services-content .container {
-    max-width: 1000px;
-}
-
-.service-detail-item {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3rem;
-    align-items: center;
-    margin-bottom: 5rem;
-}
-
-/* Alternate layout for every other item */
-.service-detail-item:nth-child(even) {
-    grid-template-columns: 1fr 1fr;
-}
-
-.service-detail-item:nth-child(even) .service-detail-image {
-    order: 2; /* Flips the image to the right */
-}
-
-.service-detail-image img {
-    width: 100%;
-    border-radius: 8px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-}
-
-.service-detail-text h2 {
-    margin-top: 0;
-    font-size: 2rem;
-}
-
-.service-detail-text .cta-button {
-    margin-top: 1rem;
-}
-
-@media (max-width: 768px) {
-    .service-detail-item,
-    .service-detail-item:nth-child(even) {
-        grid-template-columns: 1fr; /* Stack on mobile */
-    }
-    .service-detail-item:nth-child(even) .service-detail-image {
-        order: 0; /* Reset order for mobile */
-    }
-}
-
-/* --- General Mobile Responsive Styles --- */
-@media (max-width: 768px) {
-    /* --- Header & Navigation --- */
-    header .container {
-        justify-content: center; /* Center the logo on mobile */
-        padding-top: 1rem; /* Add padding to accommodate larger logo */
-        padding-bottom: 1rem;
-    }
-
-    .hamburger-menu {
-        display: block; /* Show the hamburger on mobile */
-        left: 10px; /* Position hamburger on the left */
-        top: 50%; /* Vertically center the hamburger */
-        transform: translateY(-50%);
-    }
-
-    header nav {
-        display: none; /* Hide nav by default on mobile */
-        position: absolute;
-        top: 100%; /* Position it right below the header */
-        left: 0;
-        width: 100%;
-        background: #fcfcfc;
-        box-shadow: 0 5px 10px rgba(0,0,0,0.1);
-        padding: 1rem 0;
-    }
-
-    header nav.is-active {
-        display: block; /* Show the nav when active */
-    }
-
-    header nav ul {
-        flex-direction: column;
-        align-items: center;
-        gap: 1rem; /* Increase gap for better touch targets */
-        width: 100%;
-    }
-    
-    /* New Rule: Ensure links inside the active mobile nav are always dark */
-    header nav.is-active a {
-        color: #263238 !important; /* Force dark color for readability */
-    }
-    
-    header .logo img {
-        height: 100px; /* Enlarge logo on mobile */
-        margin: 0 auto; /* Ensure it's centered if its container is full-width */
-    }
-
-    /* --- Hero Section --- */
-    .hero {
-        padding: 4rem 0; /* Reduce padding on mobile */
-    }
-
-    .hero h1 {
-        font-size: 2.2rem; /* Smaller text for mobile */
-    }
-
-    .hero p {
-        font-size: 1.2rem;
-    }
-
-    /* --- Watch Customizer --- */
-    .customizer-interface {
-        flex-direction: column;
-        gap: 3rem;
-    }
-
-    .watch-display {
-        width: 300px; /* Make watch display smaller */
-        height: 300px;
-    }
-
-    .customization-options {
-        width: 100%;
-        max-width: none;
-    }
-
-    .option-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .contact-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .contact-form .form-row {
-        grid-template-columns: 1fr;
-    }
-
-    /* --- About Page --- */
-    .about-text h2 {
-        font-size: 1.8rem; /* Adjust heading size for mobile */
-        text-align: center;
-    }
-
-    /* --- Testimonials --- */
-    .testimonial-item {
-        width: 80vw; /* Make testimonials wider on mobile */
-    }
-
-    .testimonial-slider-wrapper {
-        /* Remove the gradient mask on mobile for better readability */
-        -webkit-mask-image: none;
-        mask-image: none;
-    }
-}
-
-/* --- Keyframe Animations --- */
+/* Fadeout animation */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -1212,72 +870,395 @@ a.service-link {
     }
 }
 
-/* New Keyframe Animation for the Slider */
+/* Scroll animation for testimonials */
 @keyframes scroll {
-    from {
+    0% {
         transform: translateX(0);
     }
-    to {
-        /* Move the slider to the left by the width of the first half of the items */
-        transform: translateX(calc(-370px * 5)); /* 370px (width + margin) * 5 items */
+    100% {
+        transform: translateX(-50%);
     }
 }
 
-/* --- Gallery Modal (Lightbox) Styles --- */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000; /* Ensure it's on top of everything */
-    cursor: pointer; /* Indicates the overlay can be clicked to close */
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+/* ============================================
+   MOBILE RESPONSIVE STYLES (Under 768px)
+   ============================================ */
+
+@media (max-width: 768px) {
+    
+    /* Header Mobile Adjustments */
+    header {
+        padding: 0.8rem 0;
+    }
+
+    header .container {
+        flex-wrap: wrap;
+    }
+
+    header .logo img {
+        height: 80px;
+    }
+
+    /* Show hamburger menu on mobile */
+    .hamburger-menu {
+        display: block;
+    }
+
+    header ul {
+        flex-direction: column;
+        gap: 0;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #fff;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-in-out;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        z-index: 999;
+    }
+
+    header ul.is-active {
+        max-height: 500px;
+    }
+
+    header .container nav ul li {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    header .container nav ul li a {
+        text-transform: none;
+        font-size: 1rem;
+    }
+
+    header .container nav ul li:hover {
+        background: #F9A03F;
+        transform: none;
+        box-shadow: none;
+    }
+
+    /* Hero Section Mobile */
+    .hero {
+        padding: 3.5rem 0;
+    }
+
+    .hero h1 {
+        font-size: 2rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .hero p {
+        font-size: 1.1rem;
+        margin-top: 0.3rem;
+    }
+
+    .hero .cta-button {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+    }
+
+    /* Featured Services Mobile */
+    .featured-services {
+        padding: 2rem 0;
+    }
+
+    .featured-services h2 {
+        font-size: 1.5rem;
+    }
+
+    .featured-services p {
+        font-size: 0.95rem;
+    }
+
+    .services-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .service-item {
+        padding: 1.5rem 1rem;
+    }
+
+    .service-item h3 {
+        font-size: 1.1rem;
+    }
+
+    .service-item p {
+        font-size: 0.95rem;
+    }
+
+    /* Testimonials Mobile */
+    #testimonials {
+        padding: 2rem 0;
+    }
+
+    #testimonials h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .testimonial-slider-wrapper {
+        -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    }
+
+    .testimonial-item {
+        width: 280px;
+        margin: 0.5rem;
+        padding: 1.5rem 1rem;
+    }
+
+    .testimonial-photo {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 0.8rem;
+    }
+
+    .testimonial-item blockquote {
+        font-size: 0.9rem;
+        margin: 0 0 0.5rem 0;
+    }
+
+    .testimonial-author {
+        font-size: 0.9rem;
+    }
+
+    .testimonial-service {
+        font-size: 0.8rem;
+        margin-top: 0.15rem;
+    }
+
+    /* Watch Builder Mobile */
+    #watch-builder {
+        padding: 2rem 0;
+    }
+
+    .customizer-interface {
+        gap: 1rem;
+    }
+
+    .watch-panel {
+        max-width: 100%;
+        padding: 1rem;
+    }
+
+    .watch-display {
+        width: 220px;
+        height: 260px;
+    }
+
+    .watch-case {
+        width: 180px;
+        height: 180px;
+        border: 14px solid #afc0cc;
+    }
+
+    .watch-dial {
+        width: 140px;
+        height: 140px;
+    }
+
+    .watch-strap {
+        width: 50px;
+        height: 100px;
+        left: calc(50% - 25px);
+    }
+
+    .watch-strap.top {
+        top: -80px;
+    }
+
+    .watch-strap.bottom {
+        bottom: -80px;
+    }
+
+    .customization-options {
+        max-width: 100%;
+    }
+
+    /* Contact Form Mobile */
+    .contact-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .contact-form .form-row {
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+    }
+
+    .contact-form input,
+    .contact-form textarea {
+        padding: 0.8rem 0.9rem;
+        border-radius: 12px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    .contact-form label {
+        font-size: 0.95rem;
+    }
+
+    /* About Page Mobile */
+    .about-hero {
+        padding: 2rem 0;
+    }
+
+    .about-hero h1 {
+        font-size: 1.8rem;
+    }
+
+    .about-content {
+        padding: 2rem 0;
+    }
+
+    .story-block h2 {
+        font-size: 1.3rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .story-block p {
+        font-size: 1rem;
+    }
+
+    .about-text h2 {
+        font-size: 1.6rem;
+    }
+
+    .about-text h3 {
+        font-size: 1.2rem;
+        margin-top: 1.5rem;
+    }
+
+    /* Gallery Mobile */
+    .gallery-hero {
+        padding: 2rem 0;
+    }
+
+    .gallery-hero h1 {
+        font-size: 1.8rem;
+    }
+
+    .gallery-content {
+        padding: 2rem 0;
+    }
+
+    .gallery-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    /* Footer Mobile */
+    footer {
+        padding: 1.5rem 0;
+        margin-top: 2rem;
+    }
+
+    footer p {
+        font-size: 0.85rem;
+    }
+
+    /* Container Mobile */
+    .container {
+        width: 90%;
+    }
+
+    /* General Text Mobile */
+    h1 {
+        margin: 1rem 0;
+    }
+
+    h2 {
+        margin: 0.8rem 0;
+    }
+
+    p {
+        margin: 0.5rem 0;
+    }
 }
 
-.modal-overlay.active {
-    opacity: 1;
-    visibility: visible;
+/* ============================================
+   TABLET RESPONSIVE STYLES (769px - 1024px)
+   ============================================ */
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    
+    .hero h1 {
+        font-size: 2.4rem;
+    }
+
+    .hero p {
+        font-size: 1.4rem;
+    }
+
+    .featured-services h2 {
+        font-size: 1.6rem;
+    }
+
+    #testimonials h2 {
+        font-size: 1.6rem;
+    }
+
+    .testimonial-item {
+        width: 300px;
+    }
+
+    .services-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .contact-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .contact-form .form-row {
+        grid-template-columns: 1fr;
+    }
 }
 
-.modal-content {
-    max-width: 90%;
-    max-height: 90vh;
-    object-fit: contain;
-    border-radius: 5px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    transform: scale(0.9);
-    transition: transform 0.3s ease;
-}
+/* Extra small devices (under 480px) */
+@media (max-width: 480px) {
+    
+    header .logo img {
+        height: 60px;
+    }
 
-.modal-overlay.active .modal-content {
-    transform: scale(1);
-}
+    header a {
+        font-size: 16px;
+    }
 
-.modal-close {
-    position: absolute;
-    top: 20px;
-    right: 30px;
-    color: #fff;
-    font-size: 40px;
-    font-weight: bold;
-}
+    .hero h1 {
+        font-size: 1.6rem;
+    }
 
-/* Footer Styles */
-footer {
-    background-color: #263238; /* Deep Charcoal */
-    color: #B0BEC5; /* Cool Gray */
-    padding: 1.65rem 0;
-    text-align: center;
-    margin-top: 2rem;
-}
+    .hero p {
+        font-size: 0.95rem;
+    }
 
-footer p {
-    margin: 0;
+    .featured-services h2,
+    #testimonials h2 {
+        font-size: 1.3rem;
+    }
+
+    .testimonial-item {
+        width: 240px;
+        margin: 0.3rem;
+    }
+
+    .services-grid {
+        margin-top: 1rem;
+        gap: 1rem;
+    }
+
+    .cta-button {
+        padding: 10px 16px;
+        font-size: 0.85rem;
+    }
+
+    .contact-form input,
+    .contact-form textarea {
+        padding: 0.7rem 0.8rem;
+        font-size: 16px;
+    }
 }
