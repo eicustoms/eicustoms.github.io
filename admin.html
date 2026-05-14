@@ -94,8 +94,27 @@
             padding-bottom: 20px;
         }
 
+        .admin-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .back-link {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 5px;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: #764ba2;
+        }
+
         .admin-header h1 {
             color: #333;
+            margin: 0;
         }
 
         .logout-btn {
@@ -285,7 +304,10 @@
     <!-- Admin Panel -->
     <div class="admin-panel hidden" id="adminPanel">
         <div class="admin-header">
-            <h1>Project Dashboard</h1>
+            <div class="admin-nav">
+                <a href="index.html" class="back-link">← Back to Homepage</a>
+                <h1>Project Dashboard</h1>
+            </div>
             <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
         
