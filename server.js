@@ -3,12 +3,30 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
+const multer = require('multer');
+const sharp = require('sharp');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const submissionsFile = path.join(__dirname, 'submissions.json');
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'; // Change this!
+const galleryMetadataFile = path.join(__dirname, 'gallery-metadata.json');
+const imagesDir = path.join(__dirname, 'images');
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD; // Change this!
+//console.log('Admin password:', ADMIN_PASSWORD);
 
+// Configure multer for image uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/jpg'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG and PNG are allowed.'));
+    }
+  }
+});
 // Email configuration
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -200,6 +218,139 @@ app.delete('/admin/api/submissions/:id', (req, res) => {
 // Serve admin page
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+// Gallery API Endpoints
+
+// Get all gallery images metadata
+app.get('/admin/api/gallery', (req, res) => {
+  const token = req.headers.authorization;
+  
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    if (fs.existsSync(galleryMetadataFile)) {
+      const raw = fs.readFileSync(galleryMetadataFile, 'utf8');
+      const metadata = raw ? JSON.parse(raw) : [];
+      res.json(metadata);
+    } else {
+      res.json([]);
+    }
+  } catch (error) {
+    console.error('Failed to load gallery metadata:', error);
+    res.status(500).json({ error: 'Failed to load gallery metadata' });
+  }
+});
+
+// Get all gallery images (public - for gallery page)
+app.get('/api/gallery', (req, res) => {
+  try {
+    if (fs.existsSync(galleryMetadataFile)) {
+      const raw = fs.readFileSync(galleryMetadataFile, 'utf8');
+      const metadata = raw ? JSON.parse(raw) : [];
+      res.json(metadata);
+    } else {
+      res.json([]);
+    }
+  } catch (error) {
+    console.error('Failed to load gallery metadata:', error);
+    res.status(500).json({ error: 'Failed to load gallery metadata' });
+  }
+});
+
+// Upload a new gallery image
+app.post('/admin/api/gallery/upload', upload.single('image'), async (req, res) => {
+  const token = req.headers.authorization;
+  
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'No image provided' });
+  }
+
+  try {
+    // Generate unique filename
+    const timestamp = Date.now();
+    const filename = `gallery-${timestamp}.jpg`;
+    const filepath = path.join(imagesDir, filename);
+
+    // Optimize and save the image
+    await sharp(req.file.buffer)
+      .resize(1200, 900, {
+        fit: 'inside',
+        withoutEnlargement: true
+      })
+      .jpeg({ quality: 80, progressive: true })
+      .toFile(filepath);
+
+    // Get display name from request or use default
+    const displayName = req.body.displayName || filename.replace(/\.(jpg|jpeg)$/i, '').replace('gallery-', 'Custom Watch ');
+
+    // Add to metadata
+    let metadata = [];
+    if (fs.existsSync(galleryMetadataFile)) {
+      const raw = fs.readFileSync(galleryMetadataFile, 'utf8');
+      metadata = raw ? JSON.parse(raw) : [];
+    }
+
+    const newImage = {
+      filename: filename,
+      uploadedAt: new Date().toISOString(),
+      display_name: displayName
+    };
+
+    // Add to beginning (most recent first)
+    metadata.unshift(newImage);
+    fs.writeFileSync(galleryMetadataFile, JSON.stringify(metadata, null, 2));
+
+    res.json({ status: 'ok', image: newImage });
+  } catch (error) {
+    console.error('Failed to upload image:', error);
+    res.status(500).json({ error: 'Failed to upload image: ' + error.message });
+  }
+});
+
+// Delete a gallery image
+app.delete('/admin/api/gallery/:filename', (req, res) => {
+  const token = req.headers.authorization;
+  
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { filename } = req.params;
+  
+  try {
+    const filepath = path.join(imagesDir, filename);
+
+    // Check if file exists and is in the gallery folder
+    if (!filepath.startsWith(imagesDir) || !fs.existsSync(filepath)) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    // Delete the file
+    fs.unlinkSync(filepath);
+
+    // Remove from metadata
+    let metadata = [];
+    if (fs.existsSync(galleryMetadataFile)) {
+      const raw = fs.readFileSync(galleryMetadataFile, 'utf8');
+      metadata = raw ? JSON.parse(raw) : [];
+    }
+
+    metadata = metadata.filter(img => img.filename !== filename);
+    fs.writeFileSync(galleryMetadataFile, JSON.stringify(metadata, null, 2));
+
+    console.log(`Deleted gallery image: ${filename}`);
+    res.json({ status: 'ok' });
+  } catch (error) {
+    console.error('Failed to delete image:', error);
+    res.status(500).json({ error: 'Failed to delete image' });
+  }
 });
 
 app.listen(PORT, () => {
