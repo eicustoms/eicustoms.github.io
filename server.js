@@ -10,6 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const submissionsFile = path.join(__dirname, 'submissions.json');
 const galleryMetadataFile = path.join(__dirname, 'gallery-metadata.json');
+const commentsFile = path.join(__dirname, 'homepage-comments.json');
 const imagesDir = path.join(__dirname, 'images');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD; // Change this!
 //console.log('Admin password:', ADMIN_PASSWORD);
@@ -218,6 +219,178 @@ app.delete('/admin/api/submissions/:id', (req, res) => {
 // Serve admin page
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+// Homepage comments endpoints
+app.get('/api/comments', (req, res) => {
+  try {
+    const comments = fs.existsSync(commentsFile)
+      ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
+      : [];
+    res.json(comments);
+  } catch (error) {
+    console.error('Failed to load homepage comments:', error);
+    res.status(500).json({ error: 'Failed to load comments' });
+  }
+});
+
+app.get('/admin/api/comments', (req, res) => {
+  const token = req.headers.authorization;
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const comments = fs.existsSync(commentsFile)
+      ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
+      : [];
+    res.json(comments);
+  } catch (error) {
+    console.error('Failed to load admin comments:', error);
+    res.status(500).json({ error: 'Failed to load comments' });
+  }
+});
+
+const processCommentImageUpload = async (file) => {
+  if (!file) return null;
+  const filename = `comment-${Date.now()}-${Math.random().toString(36).substr(2, 8)}.jpg`;
+  const filepath = path.join(imagesDir, filename);
+
+  await sharp(file.buffer)
+    .resize(400, 400, {
+      fit: 'inside',
+      withoutEnlargement: true
+    })
+    .jpeg({ quality: 80, progressive: true })
+    .toFile(filepath);
+
+  return `images/${filename}`;
+};
+
+app.post('/admin/api/comments', (req, res) => {
+  const token = req.headers.authorization;
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const handleRequest = async () => {
+    const { author, service, image, content } = req.body;
+    if (!author || !content) {
+      return res.status(400).json({ error: 'Author and content are required' });
+    }
+
+    try {
+      const comments = fs.existsSync(commentsFile)
+        ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
+        : [];
+
+      const uploadedImagePath = req.file ? await processCommentImageUpload(req.file) : null;
+      const newComment = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        author: author.trim(),
+        service: service ? service.trim() : '',
+        image: uploadedImagePath || (image ? image.trim() : ''),
+        content: content.trim(),
+        createdAt: new Date().toISOString()
+      };
+
+      comments.unshift(newComment);
+      fs.writeFileSync(commentsFile, JSON.stringify(comments, null, 2));
+      res.json({ status: 'ok', comment: newComment });
+    } catch (error) {
+      console.error('Failed to save comment:', error);
+      res.status(500).json({ error: 'Failed to save comment' });
+    }
+  };
+
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.startsWith('multipart/form-data')) {
+    upload.single('imageFile')(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      handleRequest();
+    });
+  } else {
+    handleRequest();
+  }
+});
+
+app.patch('/admin/api/comments/:id', (req, res) => {
+  const token = req.headers.authorization;
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { id } = req.params;
+
+  const handleRequest = async () => {
+    const { author, service, image, content } = req.body;
+
+    try {
+      const comments = fs.existsSync(commentsFile)
+        ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
+        : [];
+
+      const index = comments.findIndex(comment => comment.id === id);
+      if (index === -1) {
+        return res.status(404).json({ error: 'Comment not found' });
+      }
+
+      const uploadedImagePath = req.file ? await processCommentImageUpload(req.file) : null;
+      comments[index] = {
+        ...comments[index],
+        author: author ? author.trim() : comments[index].author,
+        service: service !== undefined ? service.trim() : comments[index].service,
+        image: uploadedImagePath || (image !== undefined ? image.trim() : comments[index].image),
+        content: content ? content.trim() : comments[index].content
+      };
+
+      fs.writeFileSync(commentsFile, JSON.stringify(comments, null, 2));
+      res.json({ status: 'ok', comment: comments[index] });
+    } catch (error) {
+      console.error('Failed to update comment:', error);
+      res.status(500).json({ error: 'Failed to update comment' });
+    }
+  };
+
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.startsWith('multipart/form-data')) {
+    upload.single('imageFile')(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      handleRequest();
+    });
+  } else {
+    handleRequest();
+  }
+});
+
+app.delete('/admin/api/comments/:id', (req, res) => {
+  const token = req.headers.authorization;
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { id } = req.params;
+
+  try {
+    const comments = fs.existsSync(commentsFile)
+      ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
+      : [];
+
+    const filtered = comments.filter(comment => comment.id !== id);
+    if (filtered.length === comments.length) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    fs.writeFileSync(commentsFile, JSON.stringify(filtered, null, 2));
+    res.json({ status: 'ok' });
+  } catch (error) {
+    console.error('Failed to delete comment:', error);
+    res.status(500).json({ error: 'Failed to delete comment' });
+  }
 });
 
 // Gallery API Endpoints

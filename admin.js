@@ -218,14 +218,218 @@ document.addEventListener('DOMContentLoaded', () => {
     const galleryContainer = document.getElementById('galleryContainer');
     const uploadStatus = document.getElementById('uploadStatus');
     let allGalleryImages = [];
+    let allComments = [];
 
-    // Load gallery on panel show
+    const commentForm = document.getElementById('commentForm');
+    const commentList = document.getElementById('commentList');
+    const commentStatus = document.getElementById('commentStatus');
+
+    // Load gallery and comments on panel show
     loadGalleryImages();
+    loadComments();
 
     galleryUploadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         await uploadGalleryImage();
     });
+
+    commentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await addComment();
+    });
+
+    async function loadComments() {
+        const token = localStorage.getItem('adminToken');
+        try {
+            const response = await fetch('/admin/api/comments', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to load comments');
+            }
+
+            allComments = await response.json();
+            renderComments();
+        } catch (error) {
+            console.error('Comments load error:', error);
+            commentList.innerHTML = `<div class="no-gallery-items">Error loading comments: ${error.message}</div>`;
+        }
+    }
+
+    function renderComments() {
+        if (allComments.length === 0) {
+            commentList.innerHTML = '<div class="no-gallery-items">No comments yet.</div>';
+            return;
+        }
+
+        commentList.innerHTML = allComments.map(comment => `
+            <div class="comment-card">
+                <h3>${escapeHtml(comment.author)}</h3>
+                <label>Name</label>
+                <input id="commentAuthor-${escapeHtml(comment.id)}" value="${escapeHtml(comment.author)}" type="text">
+                <label>Service</label>
+                <input id="commentService-${escapeHtml(comment.id)}" value="${escapeHtml(comment.service)}" type="text">
+                <label>Image URL (optional)</label>
+                <input id="commentImage-${escapeHtml(comment.id)}" value="${escapeHtml(comment.image || '')}" type="text">
+                <label>Upload New Image (optional)</label>
+                <input id="commentImageFile-${escapeHtml(comment.id)}" type="file" accept="image/jpeg,image/png,image/jpg">
+                <label>Quote</label>
+                <textarea id="commentContent-${escapeHtml(comment.id)}">${escapeHtml(comment.content)}</textarea>
+                <div class="comment-actions">
+                    <button type="button" class="save-comment" onclick="saveComment('${escapeHtml(comment.id)}')">Save</button>
+                    <button type="button" class="delete-comment" onclick="deleteComment('${escapeHtml(comment.id)}')">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function addComment() {
+        const token = localStorage.getItem('adminToken');
+        const author = document.getElementById('commentAuthor').value.trim();
+        const service = document.getElementById('commentService').value.trim();
+        const image = document.getElementById('commentImage').value.trim();
+        const imageFile = document.getElementById('commentImageFile').files[0];
+        const content = document.getElementById('commentContent').value.trim();
+
+        if (!author || !content) {
+            showCommentStatus('Name and quote are required.', 'error');
+            return;
+        }
+
+        try {
+            let options;
+            if (imageFile) {
+                const formData = new FormData();
+                formData.append('author', author);
+                formData.append('service', service);
+                formData.append('image', image);
+                formData.append('content', content);
+                formData.append('imageFile', imageFile);
+                options = {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                };
+            } else {
+                options = {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ author, service, image, content })
+                };
+            }
+
+            const response = await fetch('/admin/api/comments', options);
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to save comment');
+            }
+
+            document.getElementById('commentAuthor').value = '';
+            document.getElementById('commentService').value = '';
+            document.getElementById('commentImage').value = '';
+            document.getElementById('commentImageFile').value = '';
+            document.getElementById('commentContent').value = '';
+            showCommentStatus('Comment added successfully.', 'success');
+            loadComments();
+        } catch (error) {
+            console.error('Add comment error:', error);
+            showCommentStatus(`Error: ${error.message}`, 'error');
+        }
+    }
+
+    window.saveComment = async function(id) {
+        const token = localStorage.getItem('adminToken');
+        const author = document.getElementById(`commentAuthor-${id}`).value.trim();
+        const service = document.getElementById(`commentService-${id}`).value.trim();
+        const image = document.getElementById(`commentImage-${id}`).value.trim();
+        const imageFile = document.getElementById(`commentImageFile-${id}`).files[0];
+        const content = document.getElementById(`commentContent-${id}`).value.trim();
+
+        try {
+            let options;
+            if (imageFile) {
+                const formData = new FormData();
+                formData.append('author', author);
+                formData.append('service', service);
+                formData.append('image', image);
+                formData.append('content', content);
+                formData.append('imageFile', imageFile);
+                options = {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                };
+            } else {
+                options = {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ author, service, image, content })
+                };
+            }
+
+            const response = await fetch(`/admin/api/comments/${id}`, options);
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to save comment');
+            }
+
+            showCommentStatus('Comment saved successfully.', 'success');
+            loadComments();
+        } catch (error) {
+            console.error('Save comment error:', error);
+            showCommentStatus(`Error: ${error.message}`, 'error');
+        }
+    };
+
+    window.deleteComment = async function(id) {
+        if (!confirm('Delete this comment? This cannot be undone.')) {
+            return;
+        }
+
+        const token = localStorage.getItem('adminToken');
+        try {
+            const response = await fetch(`/admin/api/comments/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to delete comment');
+            }
+
+            showCommentStatus('Comment deleted.', 'success');
+            loadComments();
+        } catch (error) {
+            console.error('Delete comment error:', error);
+            showCommentStatus(`Error: ${error.message}`, 'error');
+        }
+    };
+
+    function showCommentStatus(message, type) {
+        commentStatus.textContent = message;
+        commentStatus.className = `upload-status show ${type}`;
+        setTimeout(() => {
+            commentStatus.classList.remove('show');
+        }, 5000);
+    }
 
     async function loadGalleryImages() {
         const token = localStorage.getItem('adminToken');
