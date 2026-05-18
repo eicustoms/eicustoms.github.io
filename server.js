@@ -432,7 +432,7 @@ app.get('/admin/api/optimize-images', (req, res) => {
   }
 
   try {
-    res.json(getOptimizeCandidates());
+    res.json({ images: getOptimizeCandidates() });
   } catch (error) {
     console.error('Failed to load optimization candidates:', error);
     res.status(500).json({ error: 'Failed to load optimization candidates' });
