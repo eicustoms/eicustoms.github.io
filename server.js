@@ -5,6 +5,7 @@ const fs = require('fs');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 const sharp = require('sharp');
+const { optimizeImages, getOptimizeCandidates } = require('./optimize-images');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -414,6 +415,35 @@ app.get('/admin/api/gallery', (req, res) => {
   } catch (error) {
     console.error('Failed to load gallery metadata:', error);
     res.status(500).json({ error: 'Failed to load gallery metadata' });
+  }
+});
+
+app.get('/admin/api/optimize-images', (req, res) => {
+  const token = req.headers.authorization;
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    res.json(getOptimizeCandidates());
+  } catch (error) {
+    console.error('Failed to load optimization candidates:', error);
+    res.status(500).json({ error: 'Failed to load optimization candidates' });
+  }
+});
+
+app.post('/admin/api/optimize-images', async (req, res) => {
+  const token = req.headers.authorization;
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    await optimizeImages();
+    res.json({ status: 'ok' });
+  } catch (error) {
+    console.error('Image optimization failed:', error);
+    res.status(500).json({ error: 'Image optimization failed' });
   }
 });
 

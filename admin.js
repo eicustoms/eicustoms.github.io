@@ -223,10 +223,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const commentForm = document.getElementById('commentForm');
     const commentList = document.getElementById('commentList');
     const commentStatus = document.getElementById('commentStatus');
+    const optimizeStatus = document.getElementById('optimizeStatus');
+    const optimizeList = document.getElementById('optimizeList');
+    const optimizeButton = document.getElementById('optimizeImagesBtn');
 
     // Load gallery and comments on panel show
     loadGalleryImages();
     loadComments();
+    loadOptimizeTargets();
 
     galleryUploadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -549,6 +553,76 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Delete error:', error);
         }
     };
+
+    async function loadOptimizeTargets() {
+        const token = localStorage.getItem('adminToken');
+
+        try {
+            const response = await fetch('/admin/api/optimize-images', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to load optimize targets');
+            }
+
+            const data = await response.json();
+            renderOptimizeTargets(data);
+        } catch (error) {
+            optimizeList.textContent = `Unable to load optimization targets: ${error.message}`;
+            console.error('Optimize target load error:', error);
+        }
+    }
+
+    function renderOptimizeTargets(data) {
+        const galleryItems = data.gallery || [];
+        const extraItems = data.extra || [];
+
+        optimizeList.innerHTML = `
+            <strong>Will optimize:</strong>
+            <ul>
+                ${galleryItems.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+                ${extraItems.map(item => `<li>${escapeHtml(item)} <em>(hero/about image)</em></li>`).join('')}
+            </ul>
+        `;
+    }
+
+    async function runOptimizeImages() {
+        const token = localStorage.getItem('adminToken');
+
+        optimizeButton.disabled = true;
+        optimizeStatus.textContent = 'Running optimization...';
+        optimizeStatus.className = 'optimize-status show';
+
+        try {
+            const response = await fetch('/admin/api/optimize-images', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Optimization failed');
+            }
+
+            optimizeStatus.textContent = 'Images optimized successfully. Gallery metadata and key site images were compressed and resized.';
+            optimizeStatus.className = 'optimize-status show success';
+            loadGalleryImages();
+            loadOptimizeTargets();
+        } catch (error) {
+            optimizeStatus.textContent = `Optimization error: ${error.message}`;
+            optimizeStatus.className = 'optimize-status show error';
+            console.error('Optimize error:', error);
+        } finally {
+            optimizeButton.disabled = false;
+        }
+    }
+
+    optimizeButton.addEventListener('click', runOptimizeImages);
 });
 
 function escapeHtml(text) {

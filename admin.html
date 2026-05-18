@@ -353,6 +353,83 @@
             overflow-y: auto;
         }
 
+        .optimize-section {
+            background: #f4f6ff;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 25px;
+            border: 1px solid #dfe3f4;
+        }
+
+        .optimize-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .optimize-description {
+            color: #525f7f;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .optimize-list {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 12px;
+            color: #444;
+            font-size: 13px;
+            margin-top: 15px;
+        }
+
+        .optimize-list ul {
+            margin: 0;
+            padding-left: 1.15rem;
+        }
+
+        .optimize-status {
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .optimize-status.show {
+            display: block;
+        }
+
+        .optimize-status.success {
+            background: #d1e7dd;
+            color: #0f5132;
+            border: 1px solid #badbcc;
+        }
+
+        .optimize-status.error {
+            background: #f8d7da;
+            color: #842029;
+            border: 1px solid #f5c2c7;
+        }
+
+        .optimize-btn {
+            background: #4a67ff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .optimize-btn:hover {
+            background: #2f4ae8;
+        }
+
+        .optimize-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
         .gallery-item-card {
             background: white;
             border: 1px solid #ddd;
@@ -619,6 +696,14 @@
             <h3 style="color: #333;">Current Gallery Photos</h3>
             <div class="gallery-items" id="galleryContainer">
                 <div class="no-gallery-items">Loading gallery...</div>
+            </div>
+
+            <div class="optimize-section">
+                <h3>Image Optimization</h3>
+                <p class="optimize-description">Runs compression and resizing for gallery images plus key site visuals like the homepage hero and About page portrait.</p>
+                <div class="optimize-status" id="optimizeStatus"></div>
+                <button id="optimizeImagesBtn" class="optimize-btn" type="button">Optimize Images Now</button>
+                <div class="optimize-list" id="optimizeList">Loading optimization targets...</div>
             </div>
         </div>
 

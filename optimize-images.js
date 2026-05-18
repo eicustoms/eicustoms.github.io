@@ -5,8 +5,8 @@ const path = require('path');
 const imagesDir = path.join(__dirname, 'images');
 const galleryMetadata = [];
 
-// Images to process (excluding image0.jpeg - diamond logo)
-const imagesToProcess = [
+// Gallery images to process (excluding image0.jpeg - diamond logo)
+const galleryImagesToProcess = [
   'image1.jpeg',
   'image2.jpeg',
   'image4.jpeg',
@@ -25,6 +25,20 @@ const imagesToProcess = [
   'image18.jpeg',
   'eitan1.jpg'
 ];
+
+// Additional site images to optimize but not include in gallery metadata
+const extraImagesToOptimize = [
+  'herowatch.jpg'
+];
+
+const imagesToProcess = [...galleryImagesToProcess, ...extraImagesToOptimize];
+
+function getOptimizeCandidates() {
+  return {
+    gallery: galleryImagesToProcess,
+    extra: extraImagesToOptimize
+  };
+}
 
 async function optimizeImages() {
   console.log('Starting image optimization...');
@@ -55,12 +69,13 @@ async function optimizeImages() {
       // Replace original with optimized version
       fs.renameSync(outputPath + '.tmp', outputPath);
 
-      // Add metadata
-      galleryMetadata.push({
-        filename: imageFile,
-        uploadedAt: uploadedAt,
-        display_name: imageFile.replace(/\.(jpeg|jpg)$/i, '').replace(/image/, 'Watch ').replace(/eitan1/, 'Eitan\'s Custom Build')
-      });
+      if (galleryImagesToProcess.includes(imageFile)) {
+        galleryMetadata.push({
+          filename: imageFile,
+          uploadedAt: uploadedAt,
+          display_name: imageFile.replace(/\.(jpeg|jpg)$/i, '').replace(/image/, 'Watch ').replace(/eitan1/, 'Eitan\'s Custom Build')
+        });
+      }
 
       console.log(`✓ Optimized ${imageFile}`);
     } catch (error) {
@@ -78,7 +93,14 @@ async function optimizeImages() {
   console.log(`✓ Total images processed: ${galleryMetadata.length}`);
 }
 
-optimizeImages().catch(error => {
-  console.error('Optimization failed:', error);
-  process.exit(1);
-});
+module.exports = {
+  optimizeImages,
+  getOptimizeCandidates
+};
+
+if (require.main === module) {
+  optimizeImages().catch(error => {
+    console.error('Optimization failed:', error);
+    process.exit(1);
+  });
+}
