@@ -3,9 +3,10 @@ const fs = require('fs');
 const path = require('path');
 
 const imagesDir = path.join(__dirname, 'images');
-const galleryMetadata = [];
+const configFile = path.join(__dirname, 'image-optimizer-config.json');
+const backupDir = path.join(imagesDir, 'backups');
+const galleryMetadataFile = path.join(__dirname, 'gallery-metadata.json');
 
-// Gallery images to process (excluding image0.jpeg - diamond logo)
 const galleryImagesToProcess = [
   'image1.jpeg',
   'image2.jpeg',
@@ -22,84 +23,203 @@ const galleryImagesToProcess = [
   'image14.jpeg',
   'image15.jpeg',
   'image16.jpeg',
-  'image18.jpeg',
-  'eitan1.jpg'
+  'image18.jpeg'
 ];
 
-// Additional site images to optimize but not include in gallery metadata
-const extraImagesToOptimize = [
-  'herowatch.jpg'
+const defaultOptimizeConfig = [
+  { filename: 'eitan1.jpg', active: true, description: 'About page portrait' },
+  { filename: 'herowatch.jpg', active: true, description: 'Homepage hero background' }
 ];
 
-const imagesToProcess = [...galleryImagesToProcess, ...extraImagesToOptimize];
-
-function getOptimizeCandidates() {
-  return {
-    gallery: galleryImagesToProcess,
-    extra: extraImagesToOptimize
-  };
+function ensureConfigFile() {
+  if (!fs.existsSync(configFile)) {
+    fs.writeFileSync(configFile, JSON.stringify({ images: defaultOptimizeConfig }, null, 2));
+  }
 }
 
-async function optimizeImages() {
-  console.log('Starting image optimization...');
+function readOptimizeConfig() {
+  ensureConfigFile();
+  try {
+    const raw = fs.readFileSync(configFile, 'utf8');
+    const parsed = raw ? JSON.parse(raw) : { images: [] };
+    return Array.isArray(parsed.images) ? parsed.images : [];
+  } catch (error) {
+    console.error('Failed to read image optimizer config:', error);
+    return [];
+  }
+}
 
-  for (const imageFile of imagesToProcess) {
+function writeOptimizeConfig(images) {
+  ensureConfigFile();
+  fs.writeFileSync(configFile, JSON.stringify({ images }, null, 2));
+}
+
+function ensureBackupDir() {
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
+}
+
+function sanitizeFilename(filename) {
+  return path.basename(filename);
+}
+
+function isValidImageFile(filename) {
+  const ext = path.extname(filename).toLowerCase();
+  return ['.jpg', '.jpeg', '.png'].includes(ext);
+}
+
+async function backupFileIfNeeded(filename) {
+  const safeName = sanitizeFilename(filename);
+  const inputPath = path.join(imagesDir, safeName);
+  const backupPath = path.join(backupDir, `${safeName}.orig`);
+  if (!fs.existsSync(inputPath)) {
+    throw new Error(`File not found: ${safeName}`);
+  }
+  if (!fs.existsSync(backupPath)) {
+    ensureBackupDir();
+    fs.copyFileSync(inputPath, backupPath);
+  }
+}
+
+async function optimizeSingleImage(filename) {
+  const safeName = sanitizeFilename(filename);
+  if (!isValidImageFile(safeName)) {
+    throw new Error('Invalid image type');
+  }
+
+  const inputPath = path.join(imagesDir, safeName);
+  const tmpPath = `${inputPath}.tmp`;
+
+  if (!fs.existsSync(inputPath)) {
+    throw new Error(`Image not found: ${safeName}`);
+  }
+
+  await backupFileIfNeeded(safeName);
+
+  const extension = path.extname(safeName).toLowerCase();
+  const transformer = sharp(inputPath).resize(1200, 900, {
+    fit: 'inside',
+    withoutEnlargement: true
+  });
+
+  if (extension === '.png') {
+    transformer.png({ compressionLevel: 9, palette: true });
+  } else {
+    transformer.jpeg({ quality: 80, progressive: true });
+  }
+
+  await transformer.toFile(tmpPath);
+  fs.renameSync(tmpPath, inputPath);
+}
+
+async function deoptimizeSingleImage(filename) {
+  const safeName = sanitizeFilename(filename);
+  const backupPath = path.join(backupDir, `${safeName}.orig`);
+  const inputPath = path.join(imagesDir, safeName);
+
+  if (!fs.existsSync(backupPath)) {
+    throw new Error(`No backup available for ${safeName}`);
+  }
+
+  fs.copyFileSync(backupPath, inputPath);
+}
+
+async function optimizeActiveImages() {
+  const images = readOptimizeConfig().filter(item => item.active);
+  for (const image of images) {
+    try {
+      await optimizeSingleImage(image.filename);
+      console.log(`Optimized ${image.filename}`);
+    } catch (error) {
+      console.error(`Failed to optimize ${image.filename}:`, error.message);
+    }
+  }
+}
+
+async function addOptimizeImage(filename, description = '', active = true) {
+  const safeName = sanitizeFilename(filename);
+  if (!isValidImageFile(safeName)) {
+    throw new Error('Invalid image type. Only JPG and PNG are allowed.');
+  }
+
+  const images = readOptimizeConfig();
+  const existing = images.find(item => item.filename === safeName);
+  if (existing) {
+    existing.description = description || existing.description;
+    existing.active = active;
+  } else {
+    images.push({ filename: safeName, active, description });
+  }
+
+  writeOptimizeConfig(images);
+  return images.find(item => item.filename === safeName);
+}
+
+function updateOptimizeImage(filename, updates) {
+  const safeName = sanitizeFilename(filename);
+  const images = readOptimizeConfig();
+  const item = images.find(item => item.filename === safeName);
+  if (!item) {
+    throw new Error('Image not found in optimizer config');
+  }
+
+  if (typeof updates.active === 'boolean') {
+    item.active = updates.active;
+  }
+  if (typeof updates.description === 'string') {
+    item.description = updates.description;
+  }
+
+  writeOptimizeConfig(images);
+  return item;
+}
+
+function getOptimizeCandidates() {
+  return readOptimizeConfig();
+}
+
+async function optimizeGalleryImages() {
+  const galleryMetadata = [];
+
+  for (const imageFile of galleryImagesToProcess) {
     const inputPath = path.join(imagesDir, imageFile);
-    const outputPath = path.join(imagesDir, imageFile);
-
     if (!fs.existsSync(inputPath)) {
       console.log(`Skipping ${imageFile} - file not found`);
       continue;
     }
 
     try {
-      // Get file stats for modification time
+      await optimizeSingleImage(imageFile);
       const stats = fs.statSync(inputPath);
-      const uploadedAt = stats.mtime.toISOString();
-
-      // Optimize the image: resize to max 1200px width, convert to optimized format
-      await sharp(inputPath)
-        .resize(1200, 900, {
-          fit: 'inside',
-          withoutEnlargement: true
-        })
-        .jpeg({ quality: 80, progressive: true })
-        .toFile(outputPath + '.tmp');
-
-      // Replace original with optimized version
-      fs.renameSync(outputPath + '.tmp', outputPath);
-
-      if (galleryImagesToProcess.includes(imageFile)) {
-        galleryMetadata.push({
-          filename: imageFile,
-          uploadedAt: uploadedAt,
-          display_name: imageFile.replace(/\.(jpeg|jpg)$/i, '').replace(/image/, 'Watch ').replace(/eitan1/, 'Eitan\'s Custom Build')
-        });
-      }
-
+      galleryMetadata.push({
+        filename: imageFile,
+        uploadedAt: stats.mtime.toISOString(),
+        display_name: imageFile.replace(/\.(jpeg|jpg)$/i, '').replace(/image/, 'Watch ')
+      });
       console.log(`✓ Optimized ${imageFile}`);
     } catch (error) {
       console.error(`✗ Error optimizing ${imageFile}:`, error.message);
     }
   }
 
-  // Sort by most recently added (newest first)
   galleryMetadata.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-
-  // Save metadata
-  const metadataPath = path.join(__dirname, 'gallery-metadata.json');
-  fs.writeFileSync(metadataPath, JSON.stringify(galleryMetadata, null, 2));
-  console.log(`\n✓ Gallery metadata saved to gallery-metadata.json`);
-  console.log(`✓ Total images processed: ${galleryMetadata.length}`);
+  fs.writeFileSync(galleryMetadataFile, JSON.stringify(galleryMetadata, null, 2));
+  console.log(`\n✓ Gallery metadata saved to ${galleryMetadataFile}`);
 }
 
 module.exports = {
-  optimizeImages,
-  getOptimizeCandidates
+  getOptimizeCandidates,
+  optimizeSingleImage,
+  deoptimizeSingleImage,
+  optimizeActiveImages,
+  addOptimizeImage,
+  updateOptimizeImage,
+  optimizeGalleryImages
 };
 
 if (require.main === module) {
-  optimizeImages().catch(error => {
+  optimizeGalleryImages().catch(error => {
     console.error('Optimization failed:', error);
     process.exit(1);
   });

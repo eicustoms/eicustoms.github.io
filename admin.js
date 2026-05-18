@@ -226,6 +226,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const optimizeStatus = document.getElementById('optimizeStatus');
     const optimizeList = document.getElementById('optimizeList');
     const optimizeButton = document.getElementById('optimizeImagesBtn');
+    const optimizeUploadForm = document.getElementById('optimizeUploadForm');
+    const optimizeUploadFile = document.getElementById('optimizeUploadFile');
+    const optimizeUploadDescription = document.getElementById('optimizeUploadDescription');
 
     // Load gallery and comments on panel show
     loadGalleryImages();
@@ -240,6 +243,15 @@ document.addEventListener('DOMContentLoaded', () => {
     commentForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         await addComment();
+    });
+
+    optimizeUploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await uploadOptimizeImage();
+    });
+
+    optimizeButton.addEventListener('click', async () => {
+        await runOptimizeImages();
     });
 
     async function loadComments() {
@@ -577,23 +589,159 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderOptimizeTargets(data) {
-        const galleryItems = data.gallery || [];
-        const extraItems = data.extra || [];
+        const images = data.images || [];
 
-        optimizeList.innerHTML = `
-            <strong>Will optimize:</strong>
-            <ul>
-                ${galleryItems.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
-                ${extraItems.map(item => `<li>${escapeHtml(item)} <em>(hero/about image)</em></li>`).join('')}
-            </ul>
-        `;
+        if (images.length === 0) {
+            optimizeList.innerHTML = '<div class="no-gallery-items">No optimization targets configured.</div>';
+            return;
+        }
+
+        optimizeList.innerHTML = images.map(image => `
+            <div class="optimize-target-row">
+                <div class="optimize-target-meta">
+                    <strong>${escapeHtml(image.filename)}</strong>
+                    <div>${escapeHtml(image.description || 'No description')}</div>
+                    <div style="font-size: 12px; color: #666; margin-top: 4px;">Status: ${image.active ? 'Active' : 'Inactive'}</div>
+                </div>
+                <div class="optimize-target-actions">
+                    <label class="optimize-toggle">
+                        <input type="checkbox" onchange="toggleOptimizeActive(${JSON.stringify(image.filename)}, this.checked)" ${image.active ? 'checked' : ''}>
+                        Always optimize
+                    </label>
+                    <button type="button" class="optimize-btn" onclick="optimizeTargetNow(${JSON.stringify(image.filename)})">Optimize</button>
+                    <button type="button" class="optimize-btn" onclick="deoptimizeTarget(${JSON.stringify(image.filename)})">Deoptimize</button>
+                </div>
+            </div>
+        `).join('');
     }
+
+    async function uploadOptimizeImage() {
+        const token = localStorage.getItem('adminToken');
+        const file = optimizeUploadFile.files[0];
+        const description = optimizeUploadDescription.value.trim();
+
+        if (!file) {
+            optimizeStatus.textContent = 'Please select an image to upload.';
+            optimizeStatus.className = 'optimize-status show error';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('description', description);
+
+        optimizeStatus.textContent = 'Uploading image...';
+        optimizeStatus.className = 'optimize-status show';
+        try {
+            const response = await fetch('/admin/api/optimize-images/upload', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Upload failed');
+            }
+
+            optimizeStatus.textContent = 'Image uploaded and added to optimization list.';
+            optimizeStatus.className = 'optimize-status show success';
+            optimizeUploadFile.value = '';
+            optimizeUploadDescription.value = '';
+            loadOptimizeTargets();
+        } catch (error) {
+            optimizeStatus.textContent = `Upload error: ${error.message}`;
+            optimizeStatus.className = 'optimize-status show error';
+            console.error('Upload optimization image error:', error);
+        }
+    }
+
+    window.toggleOptimizeActive = async function(filename, active) {
+        const token = localStorage.getItem('adminToken');
+        try {
+            const response = await fetch(`/admin/api/optimize-images/${encodeURIComponent(filename)}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ active })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to update optimization status');
+            }
+
+            loadOptimizeTargets();
+        } catch (error) {
+            optimizeStatus.textContent = `Update error: ${error.message}`;
+            optimizeStatus.className = 'optimize-status show error';
+            console.error('Toggle optimizer active error:', error);
+        }
+    }
+
+    window.optimizeTargetNow = async function(filename) {
+        const token = localStorage.getItem('adminToken');
+        optimizeStatus.textContent = `Optimizing ${filename}...`;
+        optimizeStatus.className = 'optimize-status show';
+        try {
+            const response = await fetch(`/admin/api/optimize-images/${encodeURIComponent(filename)}/optimize`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to optimize image');
+            }
+
+            optimizeStatus.textContent = `${filename} optimized successfully.`;
+            optimizeStatus.className = 'optimize-status show success';
+            loadOptimizeTargets();
+        } catch (error) {
+            optimizeStatus.textContent = `Optimize error: ${error.message}`;
+            optimizeStatus.className = 'optimize-status show error';
+            console.error('Optimize target error:', error);
+        }
+    };
+
+    window.deoptimizeTarget = async function(filename) {
+        const token = localStorage.getItem('adminToken');
+        optimizeStatus.textContent = `Restoring ${filename} from backup...`;
+        optimizeStatus.className = 'optimize-status show';
+        try {
+            const response = await fetch(`/admin/api/optimize-images/${encodeURIComponent(filename)}/deoptimize`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to deoptimize image');
+            }
+
+            optimizeStatus.textContent = `${filename} restored from backup.`;
+            optimizeStatus.className = 'optimize-status show success';
+            loadOptimizeTargets();
+        } catch (error) {
+            optimizeStatus.textContent = `Deoptimize error: ${error.message}`;
+            optimizeStatus.className = 'optimize-status show error';
+            console.error('Deoptimize target error:', error);
+        }
+    };
 
     async function runOptimizeImages() {
         const token = localStorage.getItem('adminToken');
 
         optimizeButton.disabled = true;
-        optimizeStatus.textContent = 'Running optimization...';
+        optimizeStatus.textContent = 'Running optimization for active images...';
         optimizeStatus.className = 'optimize-status show';
 
         try {
@@ -609,9 +757,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(error.error || 'Optimization failed');
             }
 
-            optimizeStatus.textContent = 'Images optimized successfully. Gallery metadata and key site images were compressed and resized.';
+            optimizeStatus.textContent = 'Active images optimized successfully.';
             optimizeStatus.className = 'optimize-status show success';
-            loadGalleryImages();
             loadOptimizeTargets();
         } catch (error) {
             optimizeStatus.textContent = `Optimization error: ${error.message}`;
@@ -622,7 +769,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    optimizeButton.addEventListener('click', runOptimizeImages);
 });
 
 function escapeHtml(text) {

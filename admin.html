@@ -382,9 +382,44 @@
             margin-top: 15px;
         }
 
-        .optimize-list ul {
-            margin: 0;
-            padding-left: 1.15rem;
+        .optimize-target-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .optimize-target-row:last-child {
+            border-bottom: none;
+        }
+
+        .optimize-target-meta {
+            flex: 1 1 250px;
+            min-width: 190px;
+        }
+
+        .optimize-target-meta strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #333;
+        }
+
+        .optimize-target-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1 1 240px;
+            justify-content: flex-end;
+        }
+
+        .optimize-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #333;
         }
 
         .optimize-status {
@@ -700,9 +735,23 @@
 
             <div class="optimize-section">
                 <h3>Image Optimization</h3>
-                <p class="optimize-description">Runs compression and resizing for gallery images plus key site visuals like the homepage hero and About page portrait.</p>
+                <p class="optimize-description">Manage the images that should always be optimized for the live site. Upload a new image, keep it active for optimization, or restore a backup version.</p>
                 <div class="optimize-status" id="optimizeStatus"></div>
-                <button id="optimizeImagesBtn" class="optimize-btn" type="button">Optimize Images Now</button>
+                <button id="optimizeImagesBtn" class="optimize-btn" type="button">Optimize Active Images</button>
+
+                <div class="upload-form" style="margin-top: 20px;">
+                    <h4 style="margin-top: 0; color: #333;">Upload Image to Optimize</h4>
+                    <form id="optimizeUploadForm">
+                        <label for="optimizeUploadFile">Select Image:</label>
+                        <input type="file" id="optimizeUploadFile" name="image" accept="image/jpeg,image/png,image/jpg" required>
+
+                        <label for="optimizeUploadDescription">Description (optional):</label>
+                        <input type="text" id="optimizeUploadDescription" name="description" placeholder="e.g. About portrait or homepage hero">
+
+                        <button type="submit">Upload and Add</button>
+                    </form>
+                </div>
+
                 <div class="optimize-list" id="optimizeList">Loading optimization targets...</div>
             </div>
         </div>

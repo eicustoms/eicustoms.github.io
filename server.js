@@ -5,7 +5,14 @@ const fs = require('fs');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 const sharp = require('sharp');
-const { optimizeImages, getOptimizeCandidates } = require('./optimize-images');
+const {
+  getOptimizeCandidates,
+  optimizeSingleImage,
+  deoptimizeSingleImage,
+  optimizeActiveImages,
+  addOptimizeImage,
+  updateOptimizeImage
+} = require('./optimize-images');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -439,11 +446,115 @@ app.post('/admin/api/optimize-images', async (req, res) => {
   }
 
   try {
-    await optimizeImages();
+    await optimizeActiveImages();
     res.json({ status: 'ok' });
   } catch (error) {
     console.error('Image optimization failed:', error);
     res.status(500).json({ error: 'Image optimization failed' });
+  }
+});
+
+app.post('/admin/api/optimize-images/upload', upload.single('image'), async (req, res) => {
+  const token = req.headers.authorization;
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'Image file is required' });
+  }
+
+  try {
+    const originalName = path.basename(req.file.originalname);
+    const safeName = originalName.replace(/[^a-zA-Z0-9._-]/g, '-');
+    const extension = path.extname(safeName).toLowerCase();
+    const allowed = ['.jpg', '.jpeg', '.png'];
+    if (!allowed.includes(extension)) {
+      return res.status(400).json({ error: 'Only JPG and PNG images are allowed' });
+    }
+
+    let filename = safeName;
+    let targetPath = path.join(imagesDir, filename);
+    let suffix = 1;
+    while (fs.existsSync(targetPath)) {
+      filename = `${path.basename(safeName, extension)}-${suffix}${extension}`;
+      targetPath = path.join(imagesDir, filename);
+      suffix += 1;
+    }
+
+    fs.writeFileSync(targetPath, req.file.buffer);
+    const description = req.body.description ? req.body.description.trim() : '';
+    const active = req.body.active !== 'false';
+    await addOptimizeImage(filename, description, active);
+
+    if (active) {
+      await optimizeSingleImage(filename);
+    }
+
+    res.json({ status: 'ok', filename });
+  } catch (error) {
+    console.error('Image upload optimization failed:', error);
+    res.status(500).json({ error: 'Image upload optimization failed' });
+  }
+});
+
+app.patch('/admin/api/optimize-images/:filename', async (req, res) => {
+  const token = req.headers.authorization;
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const filename = path.basename(req.params.filename);
+  const { active, description } = req.body;
+
+  try {
+    const updated = updateOptimizeImage(filename, {
+      active: typeof active === 'boolean' ? active : undefined,
+      description: typeof description === 'string' ? description : undefined
+    });
+
+    if (updated.active) {
+      await optimizeSingleImage(filename);
+    }
+
+    res.json({ status: 'ok', image: updated });
+  } catch (error) {
+    console.error('Failed to update optimizer entry:', error);
+    res.status(500).json({ error: error.message || 'Failed to update optimizer entry' });
+  }
+});
+
+app.post('/admin/api/optimize-images/:filename/optimize', async (req, res) => {
+  const token = req.headers.authorization;
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const filename = path.basename(req.params.filename);
+
+  try {
+    await optimizeSingleImage(filename);
+    res.json({ status: 'ok' });
+  } catch (error) {
+    console.error('Failed to optimize image:', error);
+    res.status(500).json({ error: error.message || 'Failed to optimize image' });
+  }
+});
+
+app.post('/admin/api/optimize-images/:filename/deoptimize', async (req, res) => {
+  const token = req.headers.authorization;
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const filename = path.basename(req.params.filename);
+
+  try {
+    await deoptimizeSingleImage(filename);
+    res.json({ status: 'ok' });
+  } catch (error) {
+    console.error('Failed to deoptimize image:', error);
+    res.status(500).json({ error: error.message || 'Failed to deoptimize image' });
   }
 });
 

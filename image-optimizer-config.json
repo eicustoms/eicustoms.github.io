@@ -1,0 +1,14 @@
+{
+  "images": [
+    {
+      "filename": "eitan1.jpg",
+      "active": true,
+      "description": "About page portrait"
+    },
+    {
+      "filename": "herowatch.jpg",
+      "active": true,
+      "description": "Homepage hero background"
+    }
+  ]
+}
