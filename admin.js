@@ -589,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderOptimizeTargets(data) {
-        const images = data.images || [];
+const images = Array.isArray(data) ? data : data.images || [];
 
         if (images.length === 0) {
             optimizeList.innerHTML = '<div class="no-gallery-items">No optimization targets configured.</div>';

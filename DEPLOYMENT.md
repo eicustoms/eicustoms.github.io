@@ -6,7 +6,7 @@ This guide explains how to deploy your watch site backend + frontend to Railway 
 
 - GitHub account (fork/push your repo there)
 - Railway account (free: https://railway.app)
-- Gmail acount (for email notifications - optional)
+- Gmail account (for email notifications - optional)
 
 ---
 
@@ -98,9 +98,17 @@ submissions.json
      EMAIL_USER=your-email@gmail.com
      EMAIL_PASSWORD=your-gmail-app-password
      NODE_ENV=production
+     DATA_DIR=/data
      ```
 
-5. **Deploy:**
+   - `DATA_DIR` tells the app where to store runtime JSON and uploaded images.
+
+5. **Add persistent storage:**
+   - In Railway, add the "Persistent Storage" plugin to your project.
+   - Mount the storage at `/data`.
+   - This keeps `submissions.json`, `homepage-comments.json`, `image-optimizer-config.json`, `gallery-metadata.json`, and uploaded images persistent across redeploys.
+
+6. **Deploy:**
    - Railway auto-deploys after you push to GitHub
    - Your site will be live at: `https://your-project-name.railway.app`
 
