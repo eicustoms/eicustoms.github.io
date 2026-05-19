@@ -5,7 +5,9 @@ const fs = require('fs');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 const sharp = require('sharp');
+const { pool, initDb } = require('./db');
 const {
+  setPool,
   getOptimizeCandidates,
   optimizeSingleImage,
   deoptimizeSingleImage,
@@ -16,12 +18,42 @@ const {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const submissionsFile = path.join(__dirname, 'submissions.json');
-const galleryMetadataFile = path.join(__dirname, 'gallery-metadata.json');
-const commentsFile = path.join(__dirname, 'homepage-comments.json');
-const imagesDir = path.join(__dirname, 'images');
+const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname;
+const submissionsFile = path.join(dataDir, 'submissions.json');
+const galleryMetadataFile = path.join(dataDir, 'gallery-metadata.json');
+const commentsFile = path.join(dataDir, 'homepage-comments.json');
+const imagesDir = path.join(dataDir, 'images');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD; // Change this!
-//console.log('Admin password:', ADMIN_PASSWORD);
+
+const ensureDataPaths = () => {
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+  if (!fs.existsSync(imagesDir)) {
+    fs.mkdirSync(imagesDir, { recursive: true });
+  }
+};
+
+ensureDataPaths();
+
+// Initialize database if DATABASE_URL is set
+const initializeApp = async () => {
+  if (process.env.DATABASE_URL) {
+    try {
+      await initDb();
+      setPool(pool);
+      console.log('✓ Database initialized');
+    } catch (error) {
+      console.error('Database initialization failed:', error);
+      process.exit(1);
+    }
+  } else {
+    console.log('⚠️  DATABASE_URL not set. Using file-based storage.');
+  }
+};
+
+initializeApp();
+
 
 // Configure multer for image uploads
 const storage = multer.memoryStorage();
@@ -46,6 +78,7 @@ const transporter = nodemailer.createTransport({
 });
 
 app.use(express.json());
+app.use('/images', express.static(imagesDir));
 app.use(express.static(path.join(__dirname)));
 
 // Helper function to send email
@@ -86,7 +119,7 @@ Received at: ${submission.receivedAt}
   }
 };
 
-app.post('/api/contact', (req, res) => {
+app.post('/api/contact', async (req, res) => {
   const submission = {
     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
     ...req.body,
@@ -94,22 +127,32 @@ app.post('/api/contact', (req, res) => {
     status: 'pending'
   };
 
-  let submissions = [];
   try {
-    if (fs.existsSync(submissionsFile)) {
-      const raw = fs.readFileSync(submissionsFile, 'utf8');
-      submissions = raw ? JSON.parse(raw) : [];
+    if (pool) {
+      // Use database
+      await pool.query(
+        `INSERT INTO submissions (id, name, email, phone, message, custom_case, custom_bezel, custom_dial, custom_strap, custom_summary, received_at, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [submission.id, submission.name, submission.email, submission.phone, submission.message,
+         submission.custom_case, submission.custom_bezel, submission.custom_dial, submission.custom_strap,
+         submission.custom_summary, submission.receivedAt, submission.status]
+      );
+    } else {
+      // Fallback to file-based storage
+      let submissions = [];
+      try {
+        if (fs.existsSync(submissionsFile)) {
+          const raw = fs.readFileSync(submissionsFile, 'utf8');
+          submissions = raw ? JSON.parse(raw) : [];
+        }
+      } catch (error) {
+        console.error('Failed to read submissions file:', error);
+      }
+      submissions.push(submission);
+      fs.writeFileSync(submissionsFile, JSON.stringify(submissions, null, 2));
     }
   } catch (error) {
-    console.error('Failed to read submissions file:', error);
-  }
-
-  submissions.push(submission);
-
-  try {
-    fs.writeFileSync(submissionsFile, JSON.stringify(submissions, null, 2));
-  } catch (error) {
-    console.error('Failed to write submissions file:', error);
+    console.error('Failed to save submission:', error);
     return res.status(500).json({ status: 'error', message: 'Unable to save submission' });
   }
 
@@ -133,7 +176,7 @@ app.post('/admin/login', (req, res) => {
 });
 
 // Protected admin submissions endpoint
-app.get('/admin/api/submissions', (req, res) => {
+app.get('/admin/api/submissions', async (req, res) => {
   const token = req.headers.authorization;
   
   if (token !== `Bearer authenticated`) {
@@ -141,12 +184,19 @@ app.get('/admin/api/submissions', (req, res) => {
   }
 
   try {
-    if (fs.existsSync(submissionsFile)) {
-      const raw = fs.readFileSync(submissionsFile, 'utf8');
-      const submissions = raw ? JSON.parse(raw) : [];
-      res.json(submissions);
+    if (pool) {
+      // Use database
+      const result = await pool.query('SELECT * FROM submissions ORDER BY received_at DESC');
+      res.json(result.rows);
     } else {
-      res.json([]);
+      // Fallback to file-based storage
+      if (fs.existsSync(submissionsFile)) {
+        const raw = fs.readFileSync(submissionsFile, 'utf8');
+        const submissions = raw ? JSON.parse(raw) : [];
+        res.json(submissions);
+      } else {
+        res.json([]);
+      }
     }
   } catch (error) {
     console.error('Failed to load submissions:', error);
@@ -155,7 +205,7 @@ app.get('/admin/api/submissions', (req, res) => {
 });
 
 // Update submission status
-app.patch('/admin/api/submissions/:id', (req, res) => {
+app.patch('/admin/api/submissions/:id', async (req, res) => {
   const token = req.headers.authorization;
   
   if (token !== `Bearer authenticated`) {
@@ -170,21 +220,34 @@ app.patch('/admin/api/submissions/:id', (req, res) => {
   }
 
   try {
-    let submissions = [];
-    if (fs.existsSync(submissionsFile)) {
-      const raw = fs.readFileSync(submissionsFile, 'utf8');
-      submissions = raw ? JSON.parse(raw) : [];
+    if (pool) {
+      // Use database
+      const result = await pool.query(
+        'UPDATE submissions SET status = $1 WHERE id = $2 RETURNING *',
+        [status, id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Submission not found' });
+      }
+      res.json({ status: 'ok', submission: result.rows[0] });
+    } else {
+      // Fallback to file-based storage
+      let submissions = [];
+      if (fs.existsSync(submissionsFile)) {
+        const raw = fs.readFileSync(submissionsFile, 'utf8');
+        submissions = raw ? JSON.parse(raw) : [];
+      }
+
+      const submissionIndex = submissions.findIndex(s => s.id === id);
+      if (submissionIndex === -1) {
+        return res.status(404).json({ error: 'Submission not found' });
+      }
+
+      submissions[submissionIndex].status = status;
+      fs.writeFileSync(submissionsFile, JSON.stringify(submissions, null, 2));
+
+      res.json({ status: 'ok', submission: submissions[submissionIndex] });
     }
-
-    const submissionIndex = submissions.findIndex(s => s.id === id);
-    if (submissionIndex === -1) {
-      return res.status(404).json({ error: 'Submission not found' });
-    }
-
-    submissions[submissionIndex].status = status;
-    fs.writeFileSync(submissionsFile, JSON.stringify(submissions, null, 2));
-
-    res.json({ status: 'ok', submission: submissions[submissionIndex] });
   } catch (error) {
     console.error('Failed to update submission:', error);
     res.status(500).json({ error: 'Failed to update submission' });
@@ -192,7 +255,7 @@ app.patch('/admin/api/submissions/:id', (req, res) => {
 });
 
 // Delete submission
-app.delete('/admin/api/submissions/:id', (req, res) => {
+app.delete('/admin/api/submissions/:id', async (req, res) => {
   const token = req.headers.authorization;
   
   if (token !== `Bearer authenticated`) {
@@ -202,22 +265,36 @@ app.delete('/admin/api/submissions/:id', (req, res) => {
   const { id } = req.params;
 
   try {
-    let submissions = [];
-    if (fs.existsSync(submissionsFile)) {
-      const raw = fs.readFileSync(submissionsFile, 'utf8');
-      submissions = raw ? JSON.parse(raw) : [];
+    if (pool) {
+      // Use database
+      const result = await pool.query(
+        'DELETE FROM submissions WHERE id = $1 RETURNING name',
+        [id]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Submission not found' });
+      }
+      console.log('Deleted submission:', result.rows[0].name);
+      res.json({ status: 'ok' });
+    } else {
+      // Fallback to file-based storage
+      let submissions = [];
+      if (fs.existsSync(submissionsFile)) {
+        const raw = fs.readFileSync(submissionsFile, 'utf8');
+        submissions = raw ? JSON.parse(raw) : [];
+      }
+
+      const submissionIndex = submissions.findIndex(s => s.id === id);
+      if (submissionIndex === -1) {
+        return res.status(404).json({ error: 'Submission not found' });
+      }
+
+      const deletedSubmission = submissions.splice(submissionIndex, 1);
+      fs.writeFileSync(submissionsFile, JSON.stringify(submissions, null, 2));
+
+      console.log('Deleted submission:', deletedSubmission[0].name);
+      res.json({ status: 'ok' });
     }
-
-    const submissionIndex = submissions.findIndex(s => s.id === id);
-    if (submissionIndex === -1) {
-      return res.status(404).json({ error: 'Submission not found' });
-    }
-
-    const deletedSubmission = submissions.splice(submissionIndex, 1);
-    fs.writeFileSync(submissionsFile, JSON.stringify(submissions, null, 2));
-
-    console.log('Deleted submission:', deletedSubmission[0].name);
-    res.json({ status: 'ok' });
   } catch (error) {
     console.error('Failed to delete submission:', error);
     res.status(500).json({ error: 'Failed to delete submission' });
@@ -230,29 +307,39 @@ app.get('/admin', (req, res) => {
 });
 
 // Homepage comments endpoints
-app.get('/api/comments', (req, res) => {
+app.get('/api/comments', async (req, res) => {
   try {
-    const comments = fs.existsSync(commentsFile)
-      ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
-      : [];
-    res.json(comments);
+    if (pool) {
+      const result = await pool.query('SELECT * FROM comments ORDER BY created_at DESC');
+      res.json(result.rows);
+    } else {
+      const comments = fs.existsSync(commentsFile)
+        ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
+        : [];
+      res.json(comments);
+    }
   } catch (error) {
     console.error('Failed to load homepage comments:', error);
     res.status(500).json({ error: 'Failed to load comments' });
   }
 });
 
-app.get('/admin/api/comments', (req, res) => {
+app.get('/admin/api/comments', async (req, res) => {
   const token = req.headers.authorization;
   if (token !== `Bearer authenticated`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
-    const comments = fs.existsSync(commentsFile)
-      ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
-      : [];
-    res.json(comments);
+    if (pool) {
+      const result = await pool.query('SELECT * FROM comments ORDER BY created_at DESC');
+      res.json(result.rows);
+    } else {
+      const comments = fs.existsSync(commentsFile)
+        ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
+        : [];
+      res.json(comments);
+    }
   } catch (error) {
     console.error('Failed to load admin comments:', error);
     res.status(500).json({ error: 'Failed to load comments' });
@@ -288,10 +375,6 @@ app.post('/admin/api/comments', (req, res) => {
     }
 
     try {
-      const comments = fs.existsSync(commentsFile)
-        ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
-        : [];
-
       const uploadedImagePath = req.file ? await processCommentImageUpload(req.file) : null;
       const newComment = {
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -302,8 +385,22 @@ app.post('/admin/api/comments', (req, res) => {
         createdAt: new Date().toISOString()
       };
 
-      comments.unshift(newComment);
-      fs.writeFileSync(commentsFile, JSON.stringify(comments, null, 2));
+      if (pool) {
+        // Use database
+        await pool.query(
+          `INSERT INTO comments (id, author, service, image, content, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [newComment.id, newComment.author, newComment.service, newComment.image, newComment.content, newComment.createdAt]
+        );
+      } else {
+        // Fallback to file-based storage
+        const comments = fs.existsSync(commentsFile)
+          ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
+          : [];
+        comments.unshift(newComment);
+        fs.writeFileSync(commentsFile, JSON.stringify(comments, null, 2));
+      }
+
       res.json({ status: 'ok', comment: newComment });
     } catch (error) {
       console.error('Failed to save comment:', error);
@@ -336,26 +433,41 @@ app.patch('/admin/api/comments/:id', (req, res) => {
     const { author, service, image, content } = req.body;
 
     try {
-      const comments = fs.existsSync(commentsFile)
-        ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
-        : [];
-
-      const index = comments.findIndex(comment => comment.id === id);
-      if (index === -1) {
-        return res.status(404).json({ error: 'Comment not found' });
-      }
-
       const uploadedImagePath = req.file ? await processCommentImageUpload(req.file) : null;
-      comments[index] = {
-        ...comments[index],
-        author: author ? author.trim() : comments[index].author,
-        service: service !== undefined ? service.trim() : comments[index].service,
-        image: uploadedImagePath || (image !== undefined ? image.trim() : comments[index].image),
-        content: content ? content.trim() : comments[index].content
-      };
 
-      fs.writeFileSync(commentsFile, JSON.stringify(comments, null, 2));
-      res.json({ status: 'ok', comment: comments[index] });
+      if (pool) {
+        // Use database
+        const result = await pool.query(
+          `UPDATE comments SET author = $1, service = $2, image = COALESCE($3, image), content = $4
+           WHERE id = $5 RETURNING *`,
+          [author || undefined, service, uploadedImagePath || (image !== undefined ? image : undefined), content, id]
+        );
+        if (result.rows.length === 0) {
+          return res.status(404).json({ error: 'Comment not found' });
+        }
+        res.json({ status: 'ok', comment: result.rows[0] });
+      } else {
+        // Fallback to file-based storage
+        const comments = fs.existsSync(commentsFile)
+          ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
+          : [];
+
+        const index = comments.findIndex(comment => comment.id === id);
+        if (index === -1) {
+          return res.status(404).json({ error: 'Comment not found' });
+        }
+
+        comments[index] = {
+          ...comments[index],
+          author: author ? author.trim() : comments[index].author,
+          service: service !== undefined ? service.trim() : comments[index].service,
+          image: uploadedImagePath || (image !== undefined ? image.trim() : comments[index].image),
+          content: content ? content.trim() : comments[index].content
+        };
+
+        fs.writeFileSync(commentsFile, JSON.stringify(comments, null, 2));
+        res.json({ status: 'ok', comment: comments[index] });
+      }
     } catch (error) {
       console.error('Failed to update comment:', error);
       res.status(500).json({ error: 'Failed to update comment' });
@@ -375,7 +487,7 @@ app.patch('/admin/api/comments/:id', (req, res) => {
   }
 });
 
-app.delete('/admin/api/comments/:id', (req, res) => {
+app.delete('/admin/api/comments/:id', async (req, res) => {
   const token = req.headers.authorization;
   if (token !== `Bearer authenticated`) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -384,17 +496,27 @@ app.delete('/admin/api/comments/:id', (req, res) => {
   const { id } = req.params;
 
   try {
-    const comments = fs.existsSync(commentsFile)
-      ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
-      : [];
+    if (pool) {
+      // Use database
+      const result = await pool.query('DELETE FROM comments WHERE id = $1 RETURNING id', [id]);
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Comment not found' });
+      }
+      res.json({ status: 'ok' });
+    } else {
+      // Fallback to file-based storage
+      const comments = fs.existsSync(commentsFile)
+        ? JSON.parse(fs.readFileSync(commentsFile, 'utf8'))
+        : [];
 
-    const filtered = comments.filter(comment => comment.id !== id);
-    if (filtered.length === comments.length) {
-      return res.status(404).json({ error: 'Comment not found' });
+      const filtered = comments.filter(comment => comment.id !== id);
+      if (filtered.length === comments.length) {
+        return res.status(404).json({ error: 'Comment not found' });
+      }
+
+      fs.writeFileSync(commentsFile, JSON.stringify(filtered, null, 2));
+      res.json({ status: 'ok' });
     }
-
-    fs.writeFileSync(commentsFile, JSON.stringify(filtered, null, 2));
-    res.json({ status: 'ok' });
   } catch (error) {
     console.error('Failed to delete comment:', error);
     res.status(500).json({ error: 'Failed to delete comment' });
@@ -404,7 +526,7 @@ app.delete('/admin/api/comments/:id', (req, res) => {
 // Gallery API Endpoints
 
 // Get all gallery images metadata
-app.get('/admin/api/gallery', (req, res) => {
+app.get('/admin/api/gallery', async (req, res) => {
   const token = req.headers.authorization;
   
   if (token !== `Bearer authenticated`) {
@@ -412,12 +534,17 @@ app.get('/admin/api/gallery', (req, res) => {
   }
 
   try {
-    if (fs.existsSync(galleryMetadataFile)) {
-      const raw = fs.readFileSync(galleryMetadataFile, 'utf8');
-      const metadata = raw ? JSON.parse(raw) : [];
-      res.json(metadata);
+    if (pool) {
+      const result = await pool.query('SELECT * FROM gallery_metadata ORDER BY uploaded_at DESC');
+      res.json(result.rows);
     } else {
-      res.json([]);
+      if (fs.existsSync(galleryMetadataFile)) {
+        const raw = fs.readFileSync(galleryMetadataFile, 'utf8');
+        const metadata = raw ? JSON.parse(raw) : [];
+        res.json(metadata);
+      } else {
+        res.json([]);
+      }
     }
   } catch (error) {
     console.error('Failed to load gallery metadata:', error);
@@ -559,14 +686,19 @@ app.post('/admin/api/optimize-images/:filename/deoptimize', async (req, res) => 
 });
 
 // Get all gallery images (public - for gallery page)
-app.get('/api/gallery', (req, res) => {
+app.get('/api/gallery', async (req, res) => {
   try {
-    if (fs.existsSync(galleryMetadataFile)) {
-      const raw = fs.readFileSync(galleryMetadataFile, 'utf8');
-      const metadata = raw ? JSON.parse(raw) : [];
-      res.json(metadata);
+    if (pool) {
+      const result = await pool.query('SELECT * FROM gallery_metadata ORDER BY uploaded_at DESC');
+      res.json(result.rows);
     } else {
-      res.json([]);
+      if (fs.existsSync(galleryMetadataFile)) {
+        const raw = fs.readFileSync(galleryMetadataFile, 'utf8');
+        const metadata = raw ? JSON.parse(raw) : [];
+        res.json(metadata);
+      } else {
+        res.json([]);
+      }
     }
   } catch (error) {
     console.error('Failed to load gallery metadata:', error);
@@ -603,23 +735,30 @@ app.post('/admin/api/gallery/upload', upload.single('image'), async (req, res) =
 
     // Get display name from request or use default
     const displayName = req.body.displayName || filename.replace(/\.(jpg|jpeg)$/i, '').replace('gallery-', 'Custom Watch ');
+    const uploadedAt = new Date().toISOString();
 
-    // Add to metadata
-    let metadata = [];
-    if (fs.existsSync(galleryMetadataFile)) {
-      const raw = fs.readFileSync(galleryMetadataFile, 'utf8');
-      metadata = raw ? JSON.parse(raw) : [];
+    // Add to database or file
+    if (pool) {
+      await pool.query(
+        `INSERT INTO gallery_metadata (filename, display_name, uploaded_at)
+         VALUES ($1, $2, $3)`,
+        [filename, displayName, uploadedAt]
+      );
+    } else {
+      let metadata = [];
+      if (fs.existsSync(galleryMetadataFile)) {
+        const raw = fs.readFileSync(galleryMetadataFile, 'utf8');
+        metadata = raw ? JSON.parse(raw) : [];
+      }
+      metadata.unshift({ filename, display_name: displayName, uploadedAt });
+      fs.writeFileSync(galleryMetadataFile, JSON.stringify(metadata, null, 2));
     }
 
     const newImage = {
       filename: filename,
-      uploadedAt: new Date().toISOString(),
+      uploadedAt: uploadedAt,
       display_name: displayName
     };
-
-    // Add to beginning (most recent first)
-    metadata.unshift(newImage);
-    fs.writeFileSync(galleryMetadataFile, JSON.stringify(metadata, null, 2));
 
     res.json({ status: 'ok', image: newImage });
   } catch (error) {
@@ -629,7 +768,7 @@ app.post('/admin/api/gallery/upload', upload.single('image'), async (req, res) =
 });
 
 // Delete a gallery image
-app.delete('/admin/api/gallery/:filename', (req, res) => {
+app.delete('/admin/api/gallery/:filename', async (req, res) => {
   const token = req.headers.authorization;
   
   if (token !== `Bearer authenticated`) {
@@ -649,15 +788,18 @@ app.delete('/admin/api/gallery/:filename', (req, res) => {
     // Delete the file
     fs.unlinkSync(filepath);
 
-    // Remove from metadata
-    let metadata = [];
-    if (fs.existsSync(galleryMetadataFile)) {
-      const raw = fs.readFileSync(galleryMetadataFile, 'utf8');
-      metadata = raw ? JSON.parse(raw) : [];
+    // Remove from database or file
+    if (pool) {
+      await pool.query('DELETE FROM gallery_metadata WHERE filename = $1', [filename]);
+    } else {
+      let metadata = [];
+      if (fs.existsSync(galleryMetadataFile)) {
+        const raw = fs.readFileSync(galleryMetadataFile, 'utf8');
+        metadata = raw ? JSON.parse(raw) : [];
+      }
+      metadata = metadata.filter(img => img.filename !== filename);
+      fs.writeFileSync(galleryMetadataFile, JSON.stringify(metadata, null, 2));
     }
-
-    metadata = metadata.filter(img => img.filename !== filename);
-    fs.writeFileSync(galleryMetadataFile, JSON.stringify(metadata, null, 2));
 
     console.log(`Deleted gallery image: ${filename}`);
     res.json({ status: 'ok' });

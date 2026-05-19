@@ -2,10 +2,18 @@ const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
-const imagesDir = path.join(__dirname, 'images');
-const configFile = path.join(__dirname, 'image-optimizer-config.json');
+let pool = null;
+
+// Initialize the pool reference (will be set from server.js)
+const setPool = (pgPool) => {
+  pool = pgPool;
+};
+
+const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname;
+const imagesDir = path.join(dataDir, 'images');
+const configFile = path.join(dataDir, 'image-optimizer-config.json');
 const backupDir = path.join(imagesDir, 'backups');
-const galleryMetadataFile = path.join(__dirname, 'gallery-metadata.json');
+const galleryMetadataFile = path.join(dataDir, 'gallery-metadata.json');
 
 const galleryImagesToProcess = [
   'image1.jpeg',
@@ -31,7 +39,17 @@ const defaultOptimizeConfig = [
   { filename: 'herowatch.jpg', active: true, description: 'Homepage hero background' }
 ];
 
+function ensureDataDirectories() {
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+  if (!fs.existsSync(imagesDir)) {
+    fs.mkdirSync(imagesDir, { recursive: true });
+  }
+}
+
 function ensureConfigFile() {
+  ensureDataDirectories();
   if (!fs.existsSync(configFile)) {
     fs.writeFileSync(configFile, JSON.stringify({ images: defaultOptimizeConfig }, null, 2));
   }
@@ -176,6 +194,11 @@ function updateOptimizeImage(filename, updates) {
 }
 
 function getOptimizeCandidates() {
+  if (pool) {
+    // Synchronous read from database is not possible; this function is called synchronously
+    // So we fall back to reading from file for now
+    return readOptimizeConfig();
+  }
   return readOptimizeConfig();
 }
 
@@ -209,6 +232,7 @@ async function optimizeGalleryImages() {
 }
 
 module.exports = {
+  setPool,
   getOptimizeCandidates,
   optimizeSingleImage,
   deoptimizeSingleImage,
