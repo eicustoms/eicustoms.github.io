@@ -815,7 +815,77 @@ app.delete('/admin/api/gallery/:filename', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete gallery image' });
   }
 });
+// Get all static images
+app.get('/admin/api/static-images', async (req, res) => {
+  const token = req.headers.authorization;
+  
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
+  try {
+    const files = fs.readdirSync(imagesDir);
+    const staticImages = files.map(filename => ({
+      filename: filename,
+      url: `/images/${filename}`
+    }));
+    res.json(staticImages);
+  } catch (error) {
+    console.error('Failed to load static images:', error);
+    res.status(500).json({ error: 'Failed to load static images' });
+  }
+});
+
+// Upload static image
+app.post('/admin/api/static-images/upload', upload.single('image'), async (req, res) => {
+  const token = req.headers.authorization;
+  
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'No image provided' });
+  }
+
+  try {
+    const filename = req.body.filename || path.basename(req.file.originalname);
+    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '-');
+    const filepath = path.join(imagesDir, safeName);
+
+    fs.writeFileSync(filepath, req.file.buffer);
+
+    res.json({ status: 'ok', filename: safeName, url: `/images/${safeName}` });
+  } catch (error) {
+    console.error('Failed to upload static image:', error);
+    res.status(500).json({ error: 'Failed to upload static image' });
+  }
+});
+
+// Delete static image
+app.delete('/admin/api/static-images/:filename', async (req, res) => {
+  const token = req.headers.authorization;
+  
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const filename = path.basename(req.params.filename);
+  const filepath = path.join(imagesDir, filename);
+
+  try {
+    if (!fs.existsSync(filepath)) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    fs.unlinkSync(filepath);
+    console.log('Deleted static image:', filename);
+    res.json({ status: 'ok' });
+  } catch (error) {
+    console.error('Failed to delete static image:', error);
+    res.status(500).json({ error: 'Failed to delete static image' });
+  }
+});
 // Upload static images (logo, eitan, etc.)
 app.post('/admin/api/static-images/upload', upload.single('image'), async (req, res) => {
   const token = req.headers.authorization;
