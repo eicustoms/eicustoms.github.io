@@ -815,6 +815,33 @@ app.delete('/admin/api/gallery/:filename', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete gallery image' });
   }
 });
+
+// Upload static images (logo, eitan, etc.)
+app.post('/admin/api/static-images/upload', upload.single('image'), async (req, res) => {
+  const token = req.headers.authorization;
+  
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'No image provided' });
+  }
+
+  try {
+    const originalName = path.basename(req.file.originalname);
+    const safeName = originalName.replace(/[^a-zA-Z0-9._-]/g, '-');
+    const filepath = path.join(imagesDir, safeName);
+
+    // Save the image as-is (no resizing for static assets)
+    fs.writeFileSync(filepath, req.file.buffer);
+
+    res.json({ status: 'ok', filename: safeName, url: `/images/${safeName}` });
+  } catch (error) {
+    console.error('Failed to upload static image:', error);
+    res.status(500).json({ error: 'Failed to upload static image' });
+  }
+});
 // Delete a gallery image
 app.delete('/admin/api/gallery/:filename', async (req, res) => {
   const token = req.headers.authorization;
