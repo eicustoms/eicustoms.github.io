@@ -756,6 +756,30 @@
             </div>
         </div>
 
+<!-- Static Images Section -->
+<div class="gallery-section">
+    <h2>Static Images (Logo, Eitan, etc.)</h2>
+    
+    <div class="upload-form">
+        <h3 style="margin-top: 0; color: #333;">Upload Static Image</h3>
+        <div class="upload-status" id="staticImageStatus"></div>
+        <form id="staticImageUploadForm">
+            <label for="staticImageFile">Select Image:</label>
+            <input type="file" id="staticImageFile" name="image" accept="image/jpeg,image/png,image/jpg" required>
+            
+            <label for="staticImageName">Filename (e.g., logo.png, eitan.jpg):</label>
+            <input type="text" id="staticImageName" name="filename" placeholder="logo.png" required>
+            
+            <button type="submit">Upload Static Image</button>
+        </form>
+    </div>
+
+    <h3 style="color: #333;">Uploaded Static Images</h3>
+    <div class="gallery-items" id="staticImagesContainer">
+        <div class="no-gallery-items">No static images uploaded yet</div>
+    </div>
+</div>
+        
         <div class="comments-section">
             <h2>Testimonials / Comments</h2>
             <div class="comment-status" id="commentStatus"></div>
