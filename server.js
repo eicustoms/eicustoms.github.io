@@ -775,6 +775,54 @@ app.delete('/admin/api/gallery/:filename', async (req, res) => {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const filename = path.basename(req.params.filename);
+  const filepath = path.join(imagesDir, filename);
+
+  try {
+    if (pool) {
+      // Delete from database
+      const result = await pool.query(
+        'DELETE FROM gallery_metadata WHERE filename = $1 RETURNING filename',
+        [filename]
+      );
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Gallery image not found' });
+      }
+    } else {
+      // Delete from file-based storage
+      if (fs.existsSync(galleryMetadataFile)) {
+        const raw = fs.readFileSync(galleryMetadataFile, 'utf8');
+        const metadata = raw ? JSON.parse(raw) : [];
+        const filtered = metadata.filter(item => item.filename !== filename);
+        
+        if (filtered.length === metadata.length) {
+          return res.status(404).json({ error: 'Gallery image not found' });
+        }
+        
+        fs.writeFileSync(galleryMetadataFile, JSON.stringify(filtered, null, 2));
+      }
+    }
+
+    // Delete the actual image file
+    if (fs.existsSync(filepath)) {
+      fs.unlinkSync(filepath);
+    }
+
+    console.log('Deleted gallery image:', filename);
+    res.json({ status: 'ok' });
+  } catch (error) {
+    console.error('Failed to delete gallery image:', error);
+    res.status(500).json({ error: 'Failed to delete gallery image' });
+  }
+});
+// Delete a gallery image
+app.delete('/admin/api/gallery/:filename', async (req, res) => {
+  const token = req.headers.authorization;
+  
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   const { filename } = req.params;
   
   try {
