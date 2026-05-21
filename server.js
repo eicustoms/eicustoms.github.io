@@ -873,6 +873,91 @@ app.delete('/admin/api/static-images/:filename', async (req, res) => {
   const filename = path.basename(req.params.filename);
   const filepath = path.join(imagesDir, filename);
 
+// List all static images
+app.get('/admin/api/static-images', (req, res) => {
+  const token = req.headers.authorization;
+
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const files = fs.readdirSync(imagesDir);
+    const images = files
+      .filter(f => /\.(jpe?g|png|gif|webp|svg)$/i.test(f))
+      .map(f => {
+        const stat = fs.statSync(path.join(imagesDir, f));
+        return { filename: f, size: stat.size, uploadedAt: stat.mtime.toISOString() };
+      })
+      .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+    res.json(images);
+  } catch (error) {
+    console.error('Failed to list static images:', error);
+    res.status(500).json({ error: 'Failed to list static images' });
+  }
+});
+
+// Upload static images (logo, eitan, etc.)
+app.post('/admin/api/static-images/upload', upload.single('image'), async (req, res) => {
+  const token = req.headers.authorization;
+
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'No image provided' });
+  }
+
+  try {
+    // Use custom filename if provided, otherwise fall back to original name
+    const rawName = (req.body.filename && req.body.filename.trim())
+      ? req.body.filename.trim()
+      : path.basename(req.file.originalname);
+    const safeName = rawName.replace(/[^a-zA-Z0-9._-]/g, '-');
+    const filepath = path.join(imagesDir, safeName);
+
+    // Save the image as-is (no resizing for static assets)
+    fs.writeFileSync(filepath, req.file.buffer);
+
+    res.json({ status: 'ok', filename: safeName, url: `/images/${safeName}` });
+  } catch (error) {
+    console.error('Failed to upload static image:', error);
+    res.status(500).json({ error: 'Failed to upload static image' });
+  }
+});
+
+// Delete a static image
+app.delete('/admin/api/static-images/:filename', (req, res) => {
+  const token = req.headers.authorization;
+
+  if (token !== `Bearer authenticated`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const filename = path.basename(req.params.filename);
+  const filepath = path.join(imagesDir, filename);
+
+  try {
+    if (!fs.existsSync(filepath)) {
+      return res.status(404).json({ error: 'Image not found' });
+    }
+
+    fs.unlinkSync(filepath);
+    console.log('Deleted static image:', filename);
+    res.json({ status: 'ok' });
+  } catch (error) {
+    console.error('Failed to delete static image:', error);
+    res.status(500).json({ error: 'Failed to delete static image' });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  if (!process.env.EMAIL_USER) {
+    console.log('⚠️  Email notifications not configured. Set EMAIL_USER and EMAIL_PASSWORD env vars.');
+  }
+});
   try {
     if (!fs.existsSync(filepath)) {
       return res.status(404).json({ error: 'Image not found' });
