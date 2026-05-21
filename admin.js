@@ -230,10 +230,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const optimizeUploadFile = document.getElementById('optimizeUploadFile');
     const optimizeUploadDescription = document.getElementById('optimizeUploadDescription');
 
-    // Load gallery and comments on panel show
+    // Load gallery, static images, and comments on panel show
     loadGalleryImages();
+    loadStaticImages();
     loadComments();
     loadOptimizeTargets();
+
 
     galleryUploadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -769,7 +771,130 @@ const images = Array.isArray(data) ? data : data.images || [];
         }
     }
 
+
+
+    // Static Images Management
+    const staticImageUploadForm = document.getElementById('staticImageUploadForm');
+    const staticImagesContainer = document.getElementById('staticImagesContainer');
+    const staticUploadStatus = document.getElementById('staticUploadStatus');
+
+    staticImageUploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const token = localStorage.getItem('adminToken');
+        const fileInput = document.getElementById('staticImageFile');
+        const filenameInput = document.getElementById('staticImageFilename');
+        const uploadButton = staticImageUploadForm.querySelector('button');
+
+        if (!fileInput.files.length) {
+            showStaticUploadStatus('Please select an image.', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('image', fileInput.files[0]);
+        if (filenameInput.value.trim()) {
+            formData.append('filename', filenameInput.value.trim());
+        }
+
+        uploadButton.disabled = true;
+        showStaticUploadStatus('Uploading...', '');
+
+        try {
+            const response = await fetch('/admin/api/static-images/upload', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Upload failed');
+            }
+
+            const result = await response.json();
+            showStaticUploadStatus(`Uploaded as /images/${escapeHtml(result.filename)}`, 'success');
+            fileInput.value = '';
+            filenameInput.value = '';
+            loadStaticImages();
+        } catch (error) {
+            showStaticUploadStatus(`Upload failed: ${error.message}`, 'error');
+            console.error('Static upload error:', error);
+        } finally {
+            uploadButton.disabled = false;
+        }
+    });
+
+    async function loadStaticImages() {
+        const token = localStorage.getItem('adminToken');
+        try {
+            const response = await fetch('/admin/api/static-images', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to load static images');
+            }
+
+            const images = await response.json();
+            renderStaticImages(images);
+        } catch (error) {
+            console.error('Static images load error:', error);
+            staticImagesContainer.innerHTML = `<div class="no-gallery-items">Error loading static images: ${error.message}</div>`;
+        }
+    }
+
+    function renderStaticImages(images) {
+        if (images.length === 0) {
+            staticImagesContainer.innerHTML = '<div class="no-gallery-items">No static images found.</div>';
+            return;
+        }
+
+        staticImagesContainer.innerHTML = images.map(img => `
+            <div class="static-image-card">
+                <img src="images/${escapeHtml(img.filename)}" alt="${escapeHtml(img.filename)}" class="static-image-thumb" onerror="this.style.display='none'">
+                <div class="static-image-info">
+                    <div>${escapeHtml(img.filename)}</div>
+                    <div class="static-image-url">/images/${escapeHtml(img.filename)}</div>
+                </div>
+                <button class="static-image-delete" onclick="deleteStaticImage('${escapeHtml(img.filename)}')">Delete</button>
+            </div>
+        `).join('');
+    }
+
+    function showStaticUploadStatus(message, type) {
+        staticUploadStatus.textContent = message;
+        staticUploadStatus.className = `upload-status show ${type}`.trim();
+        if (type === 'success' || type === 'error') {
+            setTimeout(() => staticUploadStatus.classList.remove('show'), 5000);
+        }
+    }
+
+    window.deleteStaticImage = async function(filename) {
+        if (!confirm(`Delete "${filename}"? This cannot be undone.`)) {
+            return;
+        }
+
+        const token = localStorage.getItem('adminToken');
+        try {
+            const response = await fetch(`/admin/api/static-images/${encodeURIComponent(filename)}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to delete image');
+            }
+
+            loadStaticImages();
+        } catch (error) {
+            alert('Error deleting image: ' + error.message);
+            console.error('Static delete error:', error);
+        }
+    };
+
 });
+
 
 function escapeHtml(text) {
     if (!text) return '';
