@@ -902,3 +902,105 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// Static Images Upload
+document.getElementById('staticImageUploadForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const fileInput = document.getElementById('staticImageFile');
+  const filenameInput = document.getElementById('staticImageName');
+  const statusDiv = document.getElementById('staticImageStatus');
+  const file = fileInput.files[0];
+  const filename = filenameInput.value.trim();
+
+  if (!file || !filename) {
+    showStatus(statusDiv, 'Please select a file and enter a filename', 'error');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('image', file);
+  formData.append('filename', filename);
+
+  try {
+    const response = await fetch('/admin/api/static-images/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+      },
+      body: formData
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      showStatus(statusDiv, data.error || 'Upload failed', 'error');
+      return;
+    }
+
+    showStatus(statusDiv, `✓ Uploaded: ${data.filename}`, 'success');
+    fileInput.value = '';
+    filenameInput.value = '';
+    loadStaticImages();
+  } catch (error) {
+    console.error('Upload error:', error);
+    showStatus(statusDiv, 'Upload failed: ' + error.message, 'error');
+  }
+});
+
+async function loadStaticImages() {
+  const container = document.getElementById('staticImagesContainer');
+  
+  try {
+    const response = await fetch('/admin/api/static-images', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+      }
+    });
+
+    if (!response.ok) return;
+
+    const images = await response.json();
+
+    if (images.length === 0) {
+      container.innerHTML = '<div class="no-gallery-items">No static images uploaded yet</div>';
+      return;
+    }
+
+    container.innerHTML = images.map(img => `
+      <div class="gallery-item-card">
+        <img src="/images/${img.filename}" alt="${img.filename}" class="gallery-item-image">
+        <div class="gallery-item-info">${img.filename}</div>
+        <button class="gallery-item-delete" onclick="deleteStaticImage('${img.filename}')">Delete</button>
+      </div>
+    `).join('');
+  } catch (error) {
+    console.error('Failed to load static images:', error);
+  }
+}
+
+async function deleteStaticImage(filename) {
+  if (!confirm(`Delete ${filename}?`)) return;
+
+  try {
+    const response = await fetch(`/admin/api/static-images/${filename}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      alert('Failed to delete image');
+      return;
+    }
+
+    loadStaticImages();
+  } catch (error) {
+    console.error('Delete error:', error);
+    alert('Failed to delete image');
+  }
+}
+
+// Load static images on page load
+loadStaticImages();
