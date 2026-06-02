@@ -11,9 +11,7 @@ const setPool = (pgPool) => {
 
 const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname;
 const imagesDir = path.join(dataDir, 'images');
-const configFile = path.join(dataDir, 'image-optimizer-config.json');
 const backupDir = path.join(imagesDir, 'backups');
-const galleryMetadataFile = path.join(dataDir, 'gallery-metadata.json');
 
 const galleryImagesToProcess = [
   'image1.jpeg',
@@ -34,11 +32,6 @@ const galleryImagesToProcess = [
   'image18.jpeg'
 ];
 
-const defaultOptimizeConfig = [
-  { filename: 'eitan1.jpg', active: true, description: 'About page portrait' },
-  { filename: 'herowatch.jpg', active: true, description: 'Homepage hero background' }
-];
-
 function ensureDataDirectories() {
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
@@ -46,30 +39,6 @@ function ensureDataDirectories() {
   if (!fs.existsSync(imagesDir)) {
     fs.mkdirSync(imagesDir, { recursive: true });
   }
-}
-
-function ensureConfigFile() {
-  ensureDataDirectories();
-  if (!fs.existsSync(configFile)) {
-    fs.writeFileSync(configFile, JSON.stringify({ images: defaultOptimizeConfig }, null, 2));
-  }
-}
-
-function readOptimizeConfig() {
-  ensureConfigFile();
-  try {
-    const raw = fs.readFileSync(configFile, 'utf8');
-    const parsed = raw ? JSON.parse(raw) : { images: [] };
-    return Array.isArray(parsed.images) ? parsed.images : [];
-  } catch (error) {
-    console.error('Failed to read image optimizer config:', error);
-    return [];
-  }
-}
-
-function writeOptimizeConfig(images) {
-  ensureConfigFile();
-  fs.writeFileSync(configFile, JSON.stringify({ images }, null, 2));
 }
 
 function ensureBackupDir() {
@@ -100,7 +69,7 @@ async function backupFileIfNeeded(filename) {
   }
 }
 
-async function optimizeSingleImage(filename) {
+async function optimizeSingleImage(filename, quality = 80) {
   const safeName = sanitizeFilename(filename);
   if (!isValidImageFile(safeName)) {
     throw new Error('Invalid image type');
@@ -124,7 +93,7 @@ async function optimizeSingleImage(filename) {
   if (extension === '.png') {
     transformer.png({ compressionLevel: 9, palette: true });
   } else {
-    transformer.jpeg({ quality: 80, progressive: true });
+    transformer.jpeg({ quality, progressive: true });
   }
 
   await transformer.toFile(tmpPath);
@@ -143,66 +112,104 @@ async function deoptimizeSingleImage(filename) {
   fs.copyFileSync(backupPath, inputPath);
 }
 
+async function getOptimizeCandidates() {
+  if (!pool) {
+    return [];
+  }
+  const result = await pool.query(
+    'SELECT id, filename, description, quality, active, created_at, updated_at FROM image_optimizer_config ORDER BY id ASC'
+  );
+  return result.rows;
+}
+
+async function addOptimizeImage(filename, description = '', active = true, quality = 80) {
+  const safeName = sanitizeFilename(filename);
+  if (!isValidImageFile(safeName)) {
+    throw new Error('Invalid image type. Only JPG and PNG are allowed.');
+  }
+
+  if (!pool) {
+    throw new Error('Database not available');
+  }
+
+  const qualityVal = Math.min(95, Math.max(60, parseInt(quality, 10) || 80));
+
+  const result = await pool.query(
+    `INSERT INTO image_optimizer_config (filename, description, quality, active, updated_at)
+     VALUES ($1, $2, $3, $4, NOW())
+     ON CONFLICT (filename) DO UPDATE
+       SET description = EXCLUDED.description,
+           quality     = EXCLUDED.quality,
+           active      = EXCLUDED.active,
+           updated_at  = NOW()
+     RETURNING *`,
+    [safeName, description || '', qualityVal, active]
+  );
+
+  return result.rows[0];
+}
+
+async function updateOptimizeImage(filename, updates) {
+  const safeName = sanitizeFilename(filename);
+
+  if (!pool) {
+    throw new Error('Database not available');
+  }
+
+  const setClauses = ['updated_at = NOW()'];
+  const values = [];
+  let idx = 1;
+
+  if (typeof updates.active === 'boolean') {
+    setClauses.push(`active = $${idx++}`);
+    values.push(updates.active);
+  }
+  if (typeof updates.description === 'string') {
+    setClauses.push(`description = $${idx++}`);
+    values.push(updates.description);
+  }
+  if (updates.quality !== undefined) {
+    const qualityVal = Math.min(95, Math.max(60, parseInt(updates.quality, 10) || 80));
+    setClauses.push(`quality = $${idx++}`);
+    values.push(qualityVal);
+  }
+
+  values.push(safeName);
+
+  const result = await pool.query(
+    `UPDATE image_optimizer_config SET ${setClauses.join(', ')} WHERE filename = $${idx} RETURNING *`,
+    values
+  );
+
+  if (result.rows.length === 0) {
+    throw new Error('Image not found in optimizer config');
+  }
+
+  return result.rows[0];
+}
+
 async function optimizeActiveImages() {
-  const images = readOptimizeConfig().filter(item => item.active);
-  for (const image of images) {
+  if (!pool) {
+    throw new Error('Database not available');
+  }
+
+  const result = await pool.query(
+    'SELECT filename, quality FROM image_optimizer_config WHERE active = TRUE'
+  );
+
+  for (const image of result.rows) {
     try {
-      await optimizeSingleImage(image.filename);
-      console.log(`Optimized ${image.filename}`);
+      await optimizeSingleImage(image.filename, image.quality || 80);
+      console.log(`Optimized ${image.filename} (quality=${image.quality || 80})`);
     } catch (error) {
       console.error(`Failed to optimize ${image.filename}:`, error.message);
     }
   }
 }
 
-async function addOptimizeImage(filename, description = '', active = true) {
-  const safeName = sanitizeFilename(filename);
-  if (!isValidImageFile(safeName)) {
-    throw new Error('Invalid image type. Only JPG and PNG are allowed.');
-  }
-
-  const images = readOptimizeConfig();
-  const existing = images.find(item => item.filename === safeName);
-  if (existing) {
-    existing.description = description || existing.description;
-    existing.active = active;
-  } else {
-    images.push({ filename: safeName, active, description });
-  }
-
-  writeOptimizeConfig(images);
-  return images.find(item => item.filename === safeName);
-}
-
-function updateOptimizeImage(filename, updates) {
-  const safeName = sanitizeFilename(filename);
-  const images = readOptimizeConfig();
-  const item = images.find(item => item.filename === safeName);
-  if (!item) {
-    throw new Error('Image not found in optimizer config');
-  }
-
-  if (typeof updates.active === 'boolean') {
-    item.active = updates.active;
-  }
-  if (typeof updates.description === 'string') {
-    item.description = updates.description;
-  }
-
-  writeOptimizeConfig(images);
-  return item;
-}
-
-function getOptimizeCandidates() {
-  if (pool) {
-    // Synchronous read from database is not possible; this function is called synchronously
-    // So we fall back to reading from file for now
-    return readOptimizeConfig();
-  }
-  return readOptimizeConfig();
-}
-
 async function optimizeGalleryImages() {
+  ensureDataDirectories();
+
   const galleryMetadata = [];
 
   for (const imageFile of galleryImagesToProcess) {
@@ -213,7 +220,7 @@ async function optimizeGalleryImages() {
     }
 
     try {
-      await optimizeSingleImage(imageFile);
+      await optimizeSingleImage(imageFile, 80);
       const stats = fs.statSync(inputPath);
       galleryMetadata.push({
         filename: imageFile,
@@ -227,8 +234,27 @@ async function optimizeGalleryImages() {
   }
 
   galleryMetadata.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-  fs.writeFileSync(galleryMetadataFile, JSON.stringify(galleryMetadata, null, 2));
-  console.log(`\n✓ Gallery metadata saved to ${galleryMetadataFile}`);
+
+  if (pool) {
+    // Persist gallery metadata to database
+    for (const item of galleryMetadata) {
+      try {
+        await pool.query(
+          `INSERT INTO gallery_metadata (filename, display_name, uploaded_at)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (filename) DO UPDATE
+             SET display_name = EXCLUDED.display_name,
+                 uploaded_at  = EXCLUDED.uploaded_at`,
+          [item.filename, item.display_name, item.uploadedAt]
+        );
+      } catch (err) {
+        console.error(`Failed to save gallery metadata for ${item.filename}:`, err.message);
+      }
+    }
+    console.log(`\n✓ Gallery metadata saved to database (${galleryMetadata.length} images)`);
+  } else {
+    console.log('\n⚠️  No database available — gallery metadata not persisted');
+  }
 }
 
 module.exports = {

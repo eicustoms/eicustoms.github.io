@@ -552,14 +552,15 @@ app.get('/admin/api/gallery', async (req, res) => {
   }
 });
 
-app.get('/admin/api/optimize-images', (req, res) => {
+app.get('/admin/api/optimize-images', async (req, res) => {
   const token = req.headers.authorization;
   if (token !== `Bearer authenticated`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
-    res.json({ images: getOptimizeCandidates() });
+    const images = await getOptimizeCandidates();
+    res.json({ images });
   } catch (error) {
     console.error('Failed to load optimization candidates:', error);
     res.status(500).json({ error: 'Failed to load optimization candidates' });
@@ -612,16 +613,17 @@ app.post('/admin/api/optimize-images/upload', upload.single('image'), async (req
     fs.writeFileSync(targetPath, req.file.buffer);
     const description = req.body.description ? req.body.description.trim() : '';
     const active = req.body.active !== 'false';
-    await addOptimizeImage(filename, description, active);
+    const quality = req.body.quality ? parseInt(req.body.quality, 10) : 80;
+    await addOptimizeImage(filename, description, active, quality);
 
     if (active) {
-      await optimizeSingleImage(filename);
+      await optimizeSingleImage(filename, quality);
     }
 
     res.json({ status: 'ok', filename });
   } catch (error) {
     console.error('Image upload optimization failed:', error);
-    res.status(500).json({ error: 'Image upload optimization failed' });
+    res.status(500).json({ error: error.message || 'Image upload optimization failed' });
   }
 });
 
@@ -632,16 +634,17 @@ app.patch('/admin/api/optimize-images/:filename', async (req, res) => {
   }
 
   const filename = path.basename(req.params.filename);
-  const { active, description } = req.body;
+  const { active, description, quality } = req.body;
 
   try {
-    const updated = updateOptimizeImage(filename, {
+    const updated = await updateOptimizeImage(filename, {
       active: typeof active === 'boolean' ? active : undefined,
-      description: typeof description === 'string' ? description : undefined
+      description: typeof description === 'string' ? description : undefined,
+      quality: quality !== undefined ? quality : undefined
     });
 
     if (updated.active) {
-      await optimizeSingleImage(filename);
+      await optimizeSingleImage(filename, updated.quality || 80);
     }
 
     res.json({ status: 'ok', image: updated });
@@ -650,6 +653,7 @@ app.patch('/admin/api/optimize-images/:filename', async (req, res) => {
     res.status(500).json({ error: error.message || 'Failed to update optimizer entry' });
   }
 });
+
 
 app.post('/admin/api/optimize-images/:filename/optimize', async (req, res) => {
   const token = req.headers.authorization;

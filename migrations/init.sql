@@ -28,16 +28,20 @@ CREATE TABLE IF NOT EXISTS gallery_metadata (
   uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS optimize_images (
-  filename TEXT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS image_optimizer_config (
+  id SERIAL PRIMARY KEY,
+  filename TEXT NOT NULL UNIQUE,
   description TEXT,
-  active BOOLEAN NOT NULL DEFAULT TRUE
+  quality INT NOT NULL DEFAULT 80,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-INSERT INTO optimize_images (filename, description, active)
-SELECT 'eitan1.jpg', 'About page portrait', true
-WHERE NOT EXISTS (SELECT 1 FROM optimize_images WHERE filename = 'eitan1.jpg');
+INSERT INTO image_optimizer_config (filename, description, quality, active)
+SELECT 'eitan1.jpg', 'About page portrait', 85, true
+WHERE NOT EXISTS (SELECT 1 FROM image_optimizer_config WHERE filename = 'eitan1.jpg');
 
-INSERT INTO optimize_images (filename, description, active)
-SELECT 'herowatch.jpg', 'Homepage hero background', true
-WHERE NOT EXISTS (SELECT 1 FROM optimize_images WHERE filename = 'herowatch.jpg');
+INSERT INTO image_optimizer_config (filename, description, quality, active)
+SELECT 'herowatch.jpg', 'Homepage hero background', 85, true
+WHERE NOT EXISTS (SELECT 1 FROM image_optimizer_config WHERE filename = 'herowatch.jpg');
