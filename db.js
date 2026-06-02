@@ -54,23 +54,28 @@ const initDb = async () => {
     `);
 
     await client.query(`
-      CREATE TABLE IF NOT EXISTS optimize_images (
-        filename TEXT PRIMARY KEY,
+      CREATE TABLE IF NOT EXISTS image_optimizer_config (
+        id SERIAL PRIMARY KEY,
+        filename TEXT NOT NULL UNIQUE,
         description TEXT,
-        active BOOLEAN NOT NULL DEFAULT TRUE
+        quality INT NOT NULL DEFAULT 80,
+        active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
 
-    const result = await client.query('SELECT COUNT(*)::int AS count FROM optimize_images');
+    const result = await client.query('SELECT COUNT(*)::int AS count FROM image_optimizer_config');
     if (result.rows[0].count === 0) {
       await client.query(`
-        INSERT INTO optimize_images (filename, description, active)
-        VALUES ($1, $2, $3), ($4, $5, $6)
+        INSERT INTO image_optimizer_config (filename, description, quality, active)
+        VALUES ($1, $2, $3, $4), ($5, $6, $7, $8)
       `, [
-        'eitan1.jpg', 'About page portrait', true,
-        'herowatch.jpg', 'Homepage hero background', true
+        'eitan1.jpg', 'About page portrait', 85, true,
+        'herowatch.jpg', 'Homepage hero background', 85, true
       ]);
     }
+
 
     await client.query('COMMIT');
   } catch (error) {

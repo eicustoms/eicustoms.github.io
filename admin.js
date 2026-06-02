@@ -591,7 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderOptimizeTargets(data) {
-const images = Array.isArray(data) ? data : data.images || [];
+        const images = Array.isArray(data) ? data : (data.images || []);
 
         if (images.length === 0) {
             optimizeList.innerHTML = '<div class="no-gallery-items">No optimization targets configured.</div>';
@@ -599,7 +599,7 @@ const images = Array.isArray(data) ? data : data.images || [];
         }
 
         optimizeList.innerHTML = images.map(image => `
-            <div class="optimize-target-row">
+            <div class="optimize-target-row" id="optimize-row-${escapeHtml(image.filename)}">
                 <div class="optimize-target-meta">
                     <strong>${escapeHtml(image.filename)}</strong>
                     <div>${escapeHtml(image.description || 'No description')}</div>
@@ -610,6 +610,18 @@ const images = Array.isArray(data) ? data : data.images || [];
                         <input type="checkbox" onchange="toggleOptimizeActive(${JSON.stringify(image.filename)}, this.checked)" ${image.active ? 'checked' : ''}>
                         Always optimize
                     </label>
+                    <label style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                        Quality:
+                        <input
+                            type="number"
+                            id="quality-${escapeHtml(image.filename)}"
+                            value="${image.quality || 80}"
+                            min="60"
+                            max="95"
+                            style="width: 60px; padding: 2px 4px;"
+                        >
+                    </label>
+                    <button type="button" class="optimize-btn" onclick="saveOptimizeImage(${JSON.stringify(image.filename)})">Save</button>
                     <button type="button" class="optimize-btn" onclick="optimizeTargetNow(${JSON.stringify(image.filename)})">Optimize</button>
                     <button type="button" class="optimize-btn" onclick="deoptimizeTarget(${JSON.stringify(image.filename)})">Deoptimize</button>
                 </div>
@@ -621,6 +633,8 @@ const images = Array.isArray(data) ? data : data.images || [];
         const token = localStorage.getItem('adminToken');
         const file = optimizeUploadFile.files[0];
         const description = optimizeUploadDescription.value.trim();
+        const qualityInput = document.getElementById('optimizeUploadQuality');
+        const quality = qualityInput ? parseInt(qualityInput.value, 10) || 80 : 80;
 
         if (!file) {
             optimizeStatus.textContent = 'Please select an image to upload.';
@@ -631,6 +645,7 @@ const images = Array.isArray(data) ? data : data.images || [];
         const formData = new FormData();
         formData.append('image', file);
         formData.append('description', description);
+        formData.append('quality', quality);
 
         optimizeStatus.textContent = 'Uploading image...';
         optimizeStatus.className = 'optimize-status show';
@@ -652,6 +667,7 @@ const images = Array.isArray(data) ? data : data.images || [];
             optimizeStatus.className = 'optimize-status show success';
             optimizeUploadFile.value = '';
             optimizeUploadDescription.value = '';
+            if (qualityInput) qualityInput.value = '80';
             loadOptimizeTargets();
         } catch (error) {
             optimizeStatus.textContent = `Upload error: ${error.message}`;
@@ -659,6 +675,37 @@ const images = Array.isArray(data) ? data : data.images || [];
             console.error('Upload optimization image error:', error);
         }
     }
+
+    window.saveOptimizeImage = async function(filename) {
+        const token = localStorage.getItem('adminToken');
+        const qualityInput = document.getElementById(`quality-${filename}`);
+        const quality = qualityInput ? parseInt(qualityInput.value, 10) || 80 : 80;
+
+        try {
+            const response = await fetch(`/admin/api/optimize-images/${encodeURIComponent(filename)}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ quality })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to save quality setting');
+            }
+
+            optimizeStatus.textContent = `Quality for ${filename} saved successfully.`;
+            optimizeStatus.className = 'optimize-status show success';
+            setTimeout(() => optimizeStatus.classList.remove('show'), 5000);
+            loadOptimizeTargets();
+        } catch (error) {
+            optimizeStatus.textContent = `Save error: ${error.message}`;
+            optimizeStatus.className = 'optimize-status show error';
+            console.error('Save optimize image error:', error);
+        }
+    };
 
     window.toggleOptimizeActive = async function(filename, active) {
         const token = localStorage.getItem('adminToken');
@@ -684,6 +731,8 @@ const images = Array.isArray(data) ? data : data.images || [];
             console.error('Toggle optimizer active error:', error);
         }
     }
+
+
 
     window.optimizeTargetNow = async function(filename) {
         const token = localStorage.getItem('adminToken');
