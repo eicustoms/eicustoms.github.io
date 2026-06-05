@@ -1218,13 +1218,26 @@
             selections.claspColor = claspColorEl?.getAttribute('data-color') || claspCustomSelect?.value || selections.claspColor || '-';
 
             // Persist customizer selections for contact page.
-            const storageFields = ['movement', 'dial', 'case', 'band', 'clasp', 'dialColor', 'caseColor', 'bandColor', 'claspColor', 'dialImage'];
+            const storageFields = ['movement', 'dial', 'case', 'band', 'clasp', 'dialColor', 'caseColor', 'bandColor', 'claspColor'];
             storageFields.forEach(field => {
                 const value = selections[field] || '';
                 localStorage.setItem(`quote_${field}`, value);
             });
 
-            const summaryText = storageFields
+            if (selections.dialImage) {
+                try {
+                    sessionStorage.setItem('quote_dialImage', selections.dialImage);
+                } catch (error) {
+                    console.warn('Unable to store dial image in sessionStorage:', error);
+                    sessionStorage.removeItem('quote_dialImage');
+                }
+                localStorage.setItem('quote_dialImage', 'Custom Image Uploaded');
+            } else {
+                localStorage.removeItem('quote_dialImage');
+                sessionStorage.removeItem('quote_dialImage');
+            }
+
+            const summaryText = ['movement', 'dial', 'case', 'band', 'clasp', 'dialColor', 'caseColor', 'bandColor', 'claspColor', 'dialImage']
                 .map(field => {
                     if (!selections[field]) return null;
                     if (field === 'dialImage') return 'Dial Image: Custom Image Uploaded';
@@ -1238,7 +1251,7 @@
             window.location.href = 'contact.html?from=customizer';
             setTimeout(() => {
                 window.location.href = 'contact.html?from=customizer';
-            }, 5);
+            }, 50);
         }
 
         // Add click handlers to option cards and color selectors
