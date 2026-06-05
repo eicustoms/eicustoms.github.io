@@ -1226,16 +1226,17 @@
 
             if (selections.dialImage) {
                 try {
-                    sessionStorage.setItem('quote_dialImage', selections.dialImage);
+                    sessionStorage.setItem('quote_dialImageData', selections.dialImage);
                 } catch (error) {
                     console.warn('Unable to store dial image in sessionStorage:', error);
-                    sessionStorage.removeItem('quote_dialImage');
+                    sessionStorage.removeItem('quote_dialImageData');
                 }
-                localStorage.setItem('quote_dialImage', 'Custom Image Uploaded');
+                localStorage.setItem('quote_dialImageStatus', 'Custom Image Uploaded');
             } else {
-                localStorage.removeItem('quote_dialImage');
-                sessionStorage.removeItem('quote_dialImage');
+                localStorage.removeItem('quote_dialImageStatus');
+                sessionStorage.removeItem('quote_dialImageData');
             }
+            localStorage.removeItem('quote_dialImage');
 
             const summaryText = ['movement', 'dial', 'case', 'band', 'clasp', 'dialColor', 'caseColor', 'bandColor', 'claspColor', 'dialImage']
                 .map(field => {
