@@ -800,9 +800,9 @@
 
             <!-- Controls -->
             <div class="controls">
-                <button class="btn-back" id="btnBack" onclick="previousFrame()" disabled>← Back</button>
-                <button class="btn-next" id="btnNext" onclick="nextFrame()">Next →</button>
-                <button class="btn-finalize" id="btnFinalize" onclick="finalizeOrder()" style="display: none;">Finalize Order</button>
+                <button type="button" class="btn-back" id="btnBack" onclick="previousFrame()" disabled>← Back</button>
+                <button type="button" class="btn-next" id="btnNext" onclick="nextFrame()">Next →</button>
+                <button type="button" class="btn-finalize" id="btnFinalize" style="display: none;">Finalize Order</button>
             </div>
         </div>
     </div>
@@ -1236,6 +1236,9 @@
 
             // Redirect to contact page with a marker so the contact page can read stored values.
             window.location.href = 'contact.html?from=customizer';
+            setTimeout(() => {
+                window.location.href = 'contact.html?from=customizer';
+            }, 50);
         }
 
         // Add click handlers to option cards and color selectors
@@ -1328,6 +1331,11 @@
         // Initialize
         showFrame(1);
         appendStaticCustomColorCards();
+
+        const finalizeBtn = document.getElementById('btnFinalize');
+        if (finalizeBtn) {
+            finalizeBtn.addEventListener('click', finalizeOrder);
+        }
     </script>
 
 </body>
