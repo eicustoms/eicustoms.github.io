@@ -23,98 +23,791 @@
                 </ul>
             </nav>
         </div>
+        <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #FCFCFC;
+            color: #263238;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .customizer-card {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .page-main {
+            flex: 1;
+            padding: 2rem 20px 3rem;
+        }
+
+
+        .header {
+            background: #ffffff;
+            color: #263238;
+            padding: 35px 30px;
+            text-align: center;
+            border-bottom: 1px solid #e8ecef;
+        }
+
+        .header h1 {
+            font-size: 2.3em;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            color: #1f2937;
+        }
+
+        .header p {
+            font-size: 0.95em;
+            color: #556872;
+            font-weight: 400;
+            letter-spacing: 0.4px;
+            margin: 0;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 6px;
+            display: flex;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #d4af37, #b8860b);
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .content {
+            padding: 50px 40px;
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .frame {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .frame.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .frame-title {
+            font-size: 1.8em;
+            color: #2c2c2c;
+            margin-bottom: 30px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .frame-subtitle {
+            font-size: 0.95em;
+            color: #666;
+            margin-bottom: 25px;
+            font-weight: 300;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            align-items: start;
+        }
+
+        .option-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .option-card:hover {
+            border-color: #d4af37;
+            box-shadow: 0 8px 20px rgba(212, 175, 55, 0.15);
+            transform: translateY(-4px);
+        }
+
+        .option-card.selected {
+            background: linear-gradient(135deg, #f9f9f9 0%, #f0f0f0 100%);
+            border-color: #d4af37;
+            box-shadow: 0 8px 20px rgba(212, 175, 55, 0.25);
+        }
+
+        .option-card input[type="radio"] {
+            display: none;
+        }
+
+        .custom-other-input {
+            width: 100%;
+            margin-top: 12px;
+            padding: 10px 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 0.95em;
+            color: #333;
+        }
+
+        .custom-other-input:focus {
+            border-color: #d4af37;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+        }
+
+        .option-name {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #2c2c2c;
+            margin-bottom: 8px;
+        }
+
+        .option-description {
+            font-size: 0.85em;
+            color: #888;
+            font-weight: 300;
+            margin-bottom: 10px;
+        }
+
+        .color-selector {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .color-option {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .color-option:hover {
+            transform: scale(1.15);
+            border-color: #d4af37;
+        }
+
+        .color-option.selected {
+            border-color: #d4af37;
+            box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+        }
+
+        .custom-color-card {
+            background: #fcfaf7;
+            border-color: #d4af37;
+        }
+
+        .custom-color-card .color-selector {
+            justify-content: center;
+        }
+
+        .custom-color-select {
+            min-width: 160px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            background: #fff;
+            font-size: 0.95em;
+            color: #333;
+            cursor: pointer;
+        }
+
+        .upload-section {
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .picture-upload-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            background: #fff;
+            color: #333;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s ease;
+        }
+
+        .picture-upload-label:hover {
+            border-color: #d4af37;
+        }
+
+        .picture-upload {
+            display: none;
+        }
+
+        .option-image {
+            margin-top: 12px;
+        }
+
+        .option-image img {
+            width: 100%;
+            max-height: 120px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .picture-upload-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 14px;
+            margin-top: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fff;
+            color: #333;
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+
+        .picture-upload-button:hover {
+            border-color: #d4af37;
+            background-color: #fcf7e2;
+        }
+
+        .picture-upload {
+            display: none;
+        }
+
+        .selected-summary {
+            background: #f9f9f9;
+            border-left: 4px solid #d4af37;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+
+        .selected-summary h3 {
+            color: #2c2c2c;
+            font-size: 1em;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .selected-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 0.95em;
+            color: #555;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .selected-item:last-child {
+            border-bottom: none;
+        }
+
+        .selected-label {
+            font-weight: 600;
+            color: #2c2c2c;
+        }
+
+        .selected-value {
+            color: #d4af37;
+            font-weight: 500;
+        }
+
+        .final-summary {
+            background: linear-gradient(135deg, #f9f9f9 0%, #f0f0f0 100%);
+            border: 2px solid #d4af37;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .final-summary h2 {
+            color: #2c2c2c;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .final-summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            font-size: 1em;
+            color: #555;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .final-summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .final-summary-label {
+            font-weight: 600;
+            color: #2c2c2c;
+        }
+
+        .final-summary-value {
+            color: #d4af37;
+            font-weight: 600;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-top: 40px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px 30px;
+            font-size: 1em;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
+        }
+
+        .btn-back {
+            background: #e0e0e0;
+            color: #2c2c2c;
+        }
+
+        .btn-back:hover {
+            background: #d0d0d0;
+            transform: translateX(-2px);
+        }
+
+        .btn-back:disabled {
+            background: #f0f0f0;
+            color: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, #d4af37, #b8860b);
+            color: #1a1a1a;
+        }
+
+        .btn-next:hover {
+            box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3);
+            transform: translateX(2px);
+        }
+
+        .btn-next:disabled {
+            background: #ccc;
+            color: #999;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-finalize {
+            background: linear-gradient(135deg, #d4af37, #b8860b);
+            color: #1a1a1a;
+            font-size: 1.1em;
+            padding: 16px 40px;
+        }
+
+        .btn-finalize:hover {
+            box-shadow: 0 12px 30px rgba(212, 175, 55, 0.4);
+            transform: scale(1.02);
+        }
+
+        .confirmation {
+            display: none;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .confirmation.active {
+            display: block;
+        }
+
+        .confirmation h2 {
+            color: #d4af37;
+            font-size: 2em;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .confirmation p {
+            color: #555;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .content {
+                padding: 30px 20px;
+            }
+
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
     </header>
 
-    <main>
-        <section class="customizer-hero">
+    
+        <section class="about-hero">
             <div class="container">
                 <h1>Build Your Custom Timepiece</h1>
-                <p>Choose premium finishes, dial styles, and straps with a polished preview that updates live.</p>
+                <p>Choose premium finishes, dial styles, cases, and straps.</p>
             </div>
         </section>
-
-        <section id="watch-builder">
-            <div class="container">
-                <div class="customizer-intro">
-                    <p>Use the controls below to mix and match materials and design a watch that matches your style.</p>
+    <main class="page-main">
+        <div class="container">
+            <div class="customizer-card">
+                <div class="header">
+                    <h1>LUXURY WATCH CUSTOMIZER</h1>
+                    <p>Craft Your Perfect Timepiece</p>
                 </div>
 
-                <div class="customizer-interface">
-                    <div class="watch-panel">
-                        <div class="watch-display">
-                            <div class="watch-strap top leather"></div>
-                            <div class="watch-strap bottom leather"></div>
-                            <div class="watch-case steel">
-                                <div class="watch-dial white">
-                                    <div class="watch-hand hour"></div>
-                                    <div class="watch-hand minute"></div>
-                                    <div class="watch-center"></div>
-                                </div>
-                            </div>
-                        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
 
-                        <div class="watch-summary">
-                            <h3>Your current design</h3>
-                            <ul>
-                                <li>Case: <span id="summary-case">Oystersteel</span></li>
-                                <li>Bezel: <span id="summary-bezel">Smooth</span></li>
-                                <li>Dial: <span id="summary-dial">White</span></li>
-                                <li>Strap: <span id="summary-strap">Leather</span></li>
-                            </ul>
-                        </div>
+        <div class="content">
+            <!-- Frame 1: Movement Selection -->
+            <div class="frame active" id="frame1">
+                <h2 class="frame-title">Step 1: Select Movement</h2>
+                <p class="frame-subtitle">Choose the heart of your watch</p>
+
+                <div class="options-grid">
+                    <label class="option-card">
+                        <input type="radio" name="movement" value="GMT" required>
+                        <div class="option-name">GMT</div>
+                        <div class="option-description">Dual time zone capability</div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="movement" value="Date Just" required>
+                        <div class="option-name">Date Just</div>
+                        <div class="option-description">Classic date window</div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="movement" value="Tourbillon" required>
+                        <div class="option-name">Tourbillon</div>
+                        <div class="option-description">Precision regulator mechanism</div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="movement" value="Skeleton" required>
+                        <div class="option-name">Skeleton</div>
+                        <div class="option-description">Visible movement through case back</div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="movement" value="Chronograph One" required>
+                        <div class="option-name">Chronograph One</div>
+                        <div class="option-description">Single sub-dial chronograph</div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="movement" value="Chronograph Two" required>
+                        <div class="option-name">Chronograph Two</div>
+                        <div class="option-description">Dual sub-dial chronograph</div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="movement" value="Chronograph Three" required>
+                        <div class="option-name">Chronograph Three</div>
+                        <div class="option-description">Triple sub-dial chronograph</div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="movement" value="Day Date" required>
+                        <div class="option-name">Day Date</div>
+                        <div class="option-description">Day and date display</div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Frame 2: Dial Selection -->
+            <div class="frame" id="frame2">
+                <h2 class="frame-title">Step 2: Select Dial</h2>
+                <p class="frame-subtitle">Choose the face of your watch</p>
+
+                <div class="selected-summary">
+                    <h3>Your Selections So Far</h3>
+                    <div class="selected-item">
+                        <span class="selected-label">Movement:</span>
+                        <span class="selected-value" id="summary-movement">-</span>
                     </div>
+                </div>
 
-                    <aside class="customization-options">
-                        <h2>Customizer Controls</h2>
-                        <p class="customizer-note">Pick one option from each section to preview it on the watch.</p>
-
-                        <fieldset>
-                            <legend>Case Material</legend>
-                            <div class="option-grid">
-                                <input id="case-steel" type="radio" name="case" value="steel" checked>
-                                <label for="case-steel">Oystersteel</label>
-                                <input id="case-gold" type="radio" name="case" value="gold">
-                                <label for="case-gold">Yellow Gold</label>
-                            </div>
-                        </fieldset>
-
-                        <fieldset>
-                            <legend>Bezel</legend>
-                            <div class="option-grid">
-                                <input id="bezel-smooth" type="radio" name="bezel" value="smooth" checked>
-                                <label for="bezel-smooth">Smooth</label>
-                                <input id="bezel-fluted" type="radio" name="bezel" value="fluted">
-                                <label for="bezel-fluted">Fluted</label>
-                            </div>
-                        </fieldset>
-
-                        <fieldset>
-                            <legend>Dial Color</legend>
-                            <div class="option-grid">
-                                <input id="dial-white" type="radio" name="dial" value="white" checked>
-                                <label for="dial-white">White</label>
-                                <input id="dial-black" type="radio" name="dial" value="black">
-                                <label for="dial-black">Black</label>
-                            </div>
-                        </fieldset>
-
-                        <fieldset>
-                            <legend>Strap</legend>
-                            <div class="option-grid">
-                                <input id="strap-leather" type="radio" name="strap" value="leather" checked>
-                                <label for="strap-leather">Leather</label>
-                                <input id="strap-metal" type="radio" name="strap" value="metal">
-                                <label for="strap-metal">Jubilee</label>
-                            </div>
-                        </fieldset>
-
-                        <div class="build-actions">
-                            <a id="quote-link" href="contact.html" class="cta-button">Request a quote</a>
-                        </div>
-                    </aside>
+                <div class="options-grid" id="dialOptions">
+                    <!-- Dynamically populated based on movement selection -->
                 </div>
             </div>
-        </section>
+
+            <!-- Frame 3: Case Selection -->
+            <div class="frame" id="frame3">
+                <h2 class="frame-title">Step 3: Select Case</h2>
+                <p class="frame-subtitle">Choose the bezel style and material</p>
+
+                <div class="selected-summary">
+                    <h3>Your Selections So Far</h3>
+                    <div class="selected-item">
+                        <span class="selected-label">Movement:</span>
+                        <span class="selected-value" id="summary-movement2">-</span>
+                    </div>
+                    <div class="selected-item">
+                        <span class="selected-label">Dial:</span>
+                        <span class="selected-value" id="summary-dial">-</span>
+                    </div>
+                </div>
+
+                <div class="options-grid" id="caseOptions">
+                    <!-- Dynamically populated based on movement selection -->
+                </div>
+            </div>
+
+            <!-- Frame 4: Band Selection -->
+            <div class="frame" id="frame4">
+                <h2 class="frame-title">Step 4: Select Band</h2>
+                <p class="frame-subtitle">Choose your preferred strap</p>
+
+                <div class="selected-summary">
+                    <h3>Your Selections So Far</h3>
+                    <div class="selected-item">
+                        <span class="selected-label">Movement:</span>
+                        <span class="selected-value" id="summary-movement3">-</span>
+                    </div>
+                    <div class="selected-item">
+                        <span class="selected-label">Dial:</span>
+                        <span class="selected-value" id="summary-dial2">-</span>
+                    </div>
+                    <div class="selected-item">
+                        <span class="selected-label">Case:</span>
+                        <span class="selected-value" id="summary-case">-</span>
+                    </div>
+                </div>
+
+                <div class="options-grid" id="bandOptions">
+                    <label class="option-card">
+                        <input type="radio" name="band" value="Jubilee" required>
+                        <div class="option-name">Jubilee</div>
+                        <div class="option-description">Three-link metal bracelet</div>
+                        <div class="color-selector">
+                            <span class="color-option" style="background-color: #c0c0c0;" data-color="Silver" title="Silver"></span>
+                            <span class="color-option" style="background-color: #d4af37;" data-color="Gold" title="Gold"></span>
+                            <span class="color-option" style="background-color: #b76e79;" data-color="Rose Gold" title="Rose Gold"></span>
+                        </div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="band" value="Metal" required>
+                        <div class="option-name">Metal</div>
+                        <div class="option-description">Solid metal bracelet</div>
+                        <div class="color-selector">
+                            <span class="color-option" style="background-color: #c0c0c0;" data-color="Silver" title="Silver"></span>
+                            <span class="color-option" style="background-color: #d4af37;" data-color="Gold" title="Gold"></span>
+                            <span class="color-option" style="background-color: #b76e79;" data-color="Rose Gold" title="Rose Gold"></span>
+                        </div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="band" value="Two Tone" required>
+                        <div class="option-name">Two Tone</div>
+                        <div class="option-description">Mixed metal bracelet</div>
+                        <div class="color-selector">
+                            <span class="color-option" style="background: linear-gradient(90deg, #c0c0c0 50%, #d4af37 50%);" data-color="Silver/Gold" title="Silver/Gold"></span>
+                            <span class="color-option" style="background: linear-gradient(90deg, #c0c0c0 50%, #b76e79 50%);" data-color="Silver/Rose" title="Silver/Rose Gold"></span>
+                        </div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="band" value="Leather" required>
+                        <div class="option-name">Leather</div>
+                        <div class="option-description">Premium leather strap</div>
+                        <div class="color-selector">
+                            <span class="color-option" style="background-color: #2c1810;" data-color="Brown" title="Brown"></span>
+                            <span class="color-option" style="background-color: #1a1a1a;" data-color="Black" title="Black"></span>
+                            <span class="color-option" style="background-color: #8b4513;" data-color="Tan" title="Tan"></span>
+                        </div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="band" value="Silicone" required>
+                        <div class="option-name">Silicone</div>
+                        <div class="option-description">Sporty rubber strap</div>
+                        <div class="color-selector">
+                            <span class="color-option" style="background-color: #1a1a1a;" data-color="Black" title="Black"></span>
+                            <span class="color-option" style="background-color: #cc0000;" data-color="Red" title="Red"></span>
+                            <span class="color-option" style="background-color: #0066cc;" data-color="Blue" title="Blue"></span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Frame 5: Clasp Selection -->
+            <div class="frame" id="frame5">
+                <h2 class="frame-title">Step 5: Select Clasp</h2>
+                <p class="frame-subtitle">Choose your closure mechanism</p>
+
+                <div class="selected-summary">
+                    <h3>Your Selections So Far</h3>
+                    <div class="selected-item">
+                        <span class="selected-label">Movement:</span>
+                        <span class="selected-value" id="summary-movement4">-</span>
+                    </div>
+                    <div class="selected-item">
+                        <span class="selected-label">Dial:</span>
+                        <span class="selected-value" id="summary-dial3">-</span>
+                    </div>
+                    <div class="selected-item">
+                        <span class="selected-label">Case:</span>
+                        <span class="selected-value" id="summary-case2">-</span>
+                    </div>
+                    <div class="selected-item">
+                        <span class="selected-label">Band:</span>
+                        <span class="selected-value" id="summary-band">-</span>
+                    </div>
+                </div>
+
+                <div class="options-grid" id="claspOptions">
+                    <label class="option-card">
+                        <input type="radio" name="clasp" value="Safety Clasp" required>
+                        <div class="option-name">Safety Clasp</div>
+                        <div class="option-description">Secure locking mechanism</div>
+                        <div class="color-selector">
+                            <span class="color-option" style="background-color: #c0c0c0;" data-color="Silver" title="Silver"></span>
+                            <span class="color-option" style="background-color: #d4af37;" data-color="Gold" title="Gold"></span>
+                            <span class="color-option" style="background-color: #b76e79;" data-color="Rose Gold" title="Rose Gold"></span>
+                        </div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="clasp" value="Butterfly Clasp" required>
+                        <div class="option-name">Butterfly Clasp</div>
+                        <div class="option-description">Elegant butterfly design</div>
+                        <div class="color-selector">
+                            <span class="color-option" style="background-color: #c0c0c0;" data-color="Silver" title="Silver"></span>
+                            <span class="color-option" style="background-color: #d4af37;" data-color="Gold" title="Gold"></span>
+                            <span class="color-option" style="background-color: #b76e79;" data-color="Rose Gold" title="Rose Gold"></span>
+                        </div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="clasp" value="Rolex Clasp" required>
+                        <div class="option-name">Rolex Clasp</div>
+                        <div class="option-description">Premium Rolex-style clasp</div>
+                        <div class="color-selector">
+                            <span class="color-option" style="background-color: #c0c0c0;" data-color="Silver" title="Silver"></span>
+                            <span class="color-option" style="background-color: #d4af37;" data-color="Gold" title="Gold"></span>
+                            <span class="color-option" style="background-color: #b76e79;" data-color="Rose Gold" title="Rose Gold"></span>
+                        </div>
+                    </label>
+                    <label class="option-card" data-custom-option="clasp">
+                        <input type="radio" name="clasp" value="" required>
+                        <div class="option-name">Other</div>
+                        <div class="option-description">Enter a custom clasp design</div>
+                        <input class="custom-other-input" type="text" placeholder="Type custom clasp" aria-label="Custom clasp" />
+                    </label>
+                </div>
+            </div>
+
+            <!-- Frame 6: Summary & Finalization -->
+            <div class="frame" id="frame6">
+                <h2 class="frame-title">Your Custom Watch</h2>
+                <p class="frame-subtitle">Review your selections before finalizing</p>
+
+                <div class="final-summary">
+                    <h2>Order Summary</h2>
+                    <div class="final-summary-item">
+                        <span class="final-summary-label">Movement:</span>
+                        <span class="final-summary-value" id="final-movement">-</span>
+                    </div>
+                    <div class="final-summary-item">
+                        <span class="final-summary-label">Dial:</span>
+                        <span class="final-summary-value" id="final-dial">-</span>
+                    </div>
+                    <div class="final-summary-item">
+                        <span class="final-summary-label">Case:</span>
+                        <span class="final-summary-value" id="final-case">-</span>
+                    </div>
+                    <div class="final-summary-item">
+                        <span class="final-summary-label">Band:</span>
+                        <span class="final-summary-value" id="final-band">-</span>
+                    </div>
+                    <div class="final-summary-item">
+                        <span class="final-summary-label">Band Color:</span>
+                        <span class="final-summary-value" id="final-band-color">-</span>
+                    </div>
+                    <div class="final-summary-item">
+                        <span class="final-summary-label">Clasp:</span>
+                        <span class="final-summary-value" id="final-clasp">-</span>
+                    </div>
+                    <div class="final-summary-item">
+                        <span class="final-summary-label">Clasp Color:</span>
+                        <span class="final-summary-value" id="final-clasp-color">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confirmation Message -->
+            <div class="confirmation" id="confirmation">
+                <h2>✓ Order Confirmed</h2>
+                <p>Your custom luxury watch has been successfully ordered!</p>
+                <p>Thank you for choosing our craftsmanship.</p>
+                <button class="btn-next" onclick="location.reload()">Start Over</button>
+            </div>
+
+            <!-- Controls -->
+            <div class="controls">
+                <button class="btn-back" id="btnBack" onclick="previousFrame()" disabled>← Back</button>
+                <button class="btn-next" id="btnNext" onclick="nextFrame()">Next →</button>
+                <button class="btn-finalize" id="btnFinalize" onclick="finalizeOrder()" style="display: none;">Finalize Order</button>
+            </div>
+        </div>
+    </div>
+    </div>
+    
     </main>
 
     <footer>
@@ -122,9 +815,520 @@
             <p>&copy; 2026 Ethan & Isaac Customs. All Rights Reserved. Website created by SYF Studios.</p>
         </div>
     </footer>
+<script>
+        let currentFrame = 1;
+        const totalFrames = 6;
 
-    <!-- Link to the customizer JavaScript file -->
-    <script src="customizer.js"></script>
+        const selections = {
+            movement: '',
+            dial: '',
+            dialColor: '',
+            case: '',
+            caseColor: '',
+            band: '',
+            bandColor: '',
+            clasp: '',
+            claspColor: '',
+            dialImage: ''
+        };
+
+        // Dial options based on movement
+        const dialOptions = {
+            'GMT': [
+                { name: 'Black', color: '#1a1a1a' },
+                { name: 'Blue', color: '#0066cc' },
+                { name: 'Silver', color: '#c0c0c0' },
+                { name: 'White', color: '#ffffff' },
+                { name: 'Green', color: '#006633' },
+                { name: 'Picture Dial', type: 'picture', image: 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="100%" height="100%" fill="%23f5f5f5"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23333" font-size="18">Custom+Dial+Image</text></svg>' }
+            ],
+            'Date Just': [
+                { name: 'Sunburst Black', color: '#1a1a1a' },
+                { name: 'Champagne', color: '#d4af37' },
+                { name: 'Silver Guilloche', color: '#c0c0c0' },
+                { name: 'Midnight Blue', color: '#0066cc' },
+                { name: 'Picture Dial', type: 'picture', image: 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="100%" height="100%" fill="%23f5f5f5"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23333" font-size="18">Custom+Dial+Image</text></svg>' }
+            ],
+            'Tourbillon': [
+                { name: 'Skeleton Black', color: '#1a1a1a' },
+                { name: 'Skeleton Silver', color: '#c0c0c0' },
+                { name: 'Skeleton Gold', color: '#d4af37' },
+                { name: 'Skeleton White', color: '#ffffff' },
+                { name: 'Picture Dial', type: 'picture', image: 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="100%" height="100%" fill="%23f5f5f5"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23333" font-size="18">Custom+Dial+Image</text></svg>' }
+            ],
+            'Skeleton': [
+                { name: 'Transparent Black', color: '#2a2a2a' },
+                { name: 'Transparent Silver', color: '#d0d0d0' },
+                { name: 'Transparent Gold', color: '#e6c200' },
+                { name: 'Transparent Blue', color: '#1a3a66' },
+                { name: 'Picture Dial', type: 'picture', image: 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="100%" height="100%" fill="%23f5f5f5"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23333" font-size="18">Custom+Dial+Image</text></svg>' }
+            ],
+            'Chronograph One': [
+                { name: 'Black', color: '#1a1a1a' },
+                { name: 'White', color: '#ffffff' },
+                { name: 'Silver', color: '#c0c0c0' },
+                { name: 'Blue', color: '#0066cc' },
+                { name: 'Picture Dial', type: 'picture', image: 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="100%" height="100%" fill="%23f5f5f5"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23333" font-size="18">Custom+Dial+Image</text></svg>' }
+            ],
+            'Chronograph Two': [
+                { name: 'Black', color: '#1a1a1a' },
+                { name: 'White', color: '#ffffff' },
+                { name: 'Silver', color: '#c0c0c0' },
+                { name: 'Panda', color: '#f5f5f5' },
+                { name: 'Picture Dial', type: 'picture', image: 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="100%" height="100%" fill="%23f5f5f5"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23333" font-size="18">Custom+Dial+Image</text></svg>' }
+            ],
+            'Chronograph Three': [
+                { name: 'Black', color: '#1a1a1a' },
+                { name: 'White', color: '#ffffff' },
+                { name: 'Silver', color: '#c0c0c0' },
+                { name: 'Racing Blue', color: '#003366' },
+                { name: 'Picture Dial', type: 'picture', image: 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="100%" height="100%" fill="%23f5f5f5"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23333" font-size="18">Custom+Dial+Image</text></svg>' }
+            ],
+            'Day Date': [
+                { name: 'Champagne', color: '#d4af37' },
+                { name: 'Silver', color: '#c0c0c0' },
+                { name: 'Black', color: '#1a1a1a' },
+                { name: 'White', color: '#ffffff' },
+                { name: 'Picture Dial', type: 'picture', image: 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="100%" height="100%" fill="%23f5f5f5"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23333" font-size="18">Custom+Dial+Image</text></svg>' }
+            ]
+        };
+
+        // Case options based on movement
+        const caseOptions = {
+            'GMT': [
+                { name: 'Fluted Bezel', colors: ['Silver', 'Gold', 'Rose Gold'] },
+                { name: 'AP Style', colors: ['Silver', 'Gold', 'Rose Gold'] },
+                { name: 'Divers Bezel', colors: ['Silver', 'Black', 'Blue'] },
+                { name: 'Patek Style', colors: ['Gold', 'Rose Gold', 'White Gold'] }
+            ],
+            'Date Just': [
+                { name: 'Fluted Bezel', colors: ['Silver', 'Gold', 'Rose Gold'] },
+                { name: 'AP Style', colors: ['Silver', 'Gold', 'Rose Gold'] },
+                { name: 'Divers Bezel', colors: ['Silver', 'Black', 'Blue'] },
+                { name: 'Patek Style', colors: ['Gold', 'Rose Gold', 'White Gold'] },
+                { name: 'Other', colors: ['Silver', 'Gold', 'Rose Gold'] }
+            ],
+            'Tourbillon': [
+                { name: 'Fluted Bezel', colors: ['Gold', 'Rose Gold', 'White Gold'] },
+                { name: 'AP Style', colors: ['Gold', 'Rose Gold', 'Platinum'] },
+                { name: 'Patek Style', colors: ['Gold', 'Rose Gold', 'White Gold'] },
+                { name: 'Other', colors: ['Gold', 'Rose Gold', 'Platinum'] }
+            ],
+            'Skeleton': [
+                { name: 'Fluted Bezel', colors: ['Silver', 'Gold', 'Rose Gold'] },
+                { name: 'AP Style', colors: ['Silver', 'Gold', 'Rose Gold'] },
+                { name: 'Divers Bezel', colors: ['Silver', 'Black', 'Blue'] },
+                { name: 'Other', colors: ['Silver', 'Gold', 'Rose Gold'] }
+            ],
+            'Chronograph One': [
+                { name: 'Daytona Style', colors: ['Silver', 'Black', 'Gold'] },
+                { name: 'AP Style', colors: ['Silver', 'Gold', 'Rose Gold'] },
+                { name: 'Navitimer Style', colors: ['Silver', 'Black', 'Gold'] },
+                { name: 'Other', colors: ['Silver', 'Gold', 'Rose Gold'] }
+            ],
+            'Chronograph Two': [
+                { name: 'Daytona Style', colors: ['Silver', 'Black', 'Gold'] },
+                { name: 'AP Style', colors: ['Silver', 'Gold', 'Rose Gold'] },
+                { name: 'Navitimer Style', colors: ['Silver', 'Black', 'Gold'] },
+                { name: 'Other', colors: ['Silver', 'Gold', 'Rose Gold'] }
+            ],
+            'Chronograph Three': [
+                { name: 'Daytona Style', colors: ['Silver', 'Black', 'Gold'] },
+                { name: 'AP Style', colors: ['Silver', 'Gold', 'Rose Gold'] },
+                { name: 'Navitimer Style', colors: ['Silver', 'Black', 'Gold'] },
+                { name: 'Other', colors: ['Silver', 'Gold', 'Rose Gold'] }
+            ],
+            'Day Date': [
+                { name: 'Fluted Bezel', colors: ['Gold', 'Rose Gold', 'White Gold'] },
+                { name: 'AP Style', colors: ['Gold', 'Rose Gold', 'Platinum'] },
+                { name: 'Patek Style', colors: ['Gold', 'Rose Gold', 'White Gold'] },
+                { name: 'Other', colors: ['Gold', 'Rose Gold', 'Platinum'] }
+            ]
+        };
+
+        const colorMap = {
+            'Silver': '#c0c0c0',
+            'Gold': '#d4af37',
+            'Rose Gold': '#b76e79',
+            'White Gold': '#f0f0f0',
+            'Platinum': '#e8e8e8',
+            'Black': '#1a1a1a',
+            'Blue': '#0066cc'
+        };
+
+        const extendedColorChoices = [
+            { name: 'Silver', hex: '#c0c0c0' },
+            { name: 'Gold', hex: '#d4af37' },
+            { name: 'Rose Gold', hex: '#b76e79' },
+            { name: 'Black', hex: '#1a1a1a' },
+            { name: 'White', hex: '#ffffff' },
+            { name: 'Blue', hex: '#0066cc' },
+            { name: 'Green', hex: '#006633' },
+            { name: 'Red', hex: '#cc0000' },
+            { name: 'Pink', hex: '#ff69b4' },
+            { name: 'Purple', hex: '#8a2be2' },
+            { name: 'Navy', hex: '#001f3f' },
+            { name: 'Champagne', hex: '#f7e7ce' },
+            { name: 'Ivory', hex: '#fffff0' },
+            { name: 'Charcoal', hex: '#333333' },
+            { name: 'Brown', hex: '#8b4513' },
+            { name: 'Yellow', hex: '#ffd700' }
+        ];
+
+        function updateProgress() {
+            const progress = (currentFrame / totalFrames) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        function encodeSvgDataURI(uri) {
+            const [prefix, svg] = uri.split(',', 2);
+            if (!prefix || !svg) return uri;
+            return `${prefix},${encodeURIComponent(svg)}`;
+        }
+
+        function createCustomColorCard(fieldName, title, description) {
+            const options = extendedColorChoices.map(color => {
+                return `<option value="${color.name}" data-hex="${color.hex}">${color.name}</option>`;
+            }).join('');
+
+            return `
+                <div class="option-card custom-color-card" data-custom-field="${fieldName}">
+                    <div class="option-name">${title}</div>
+                    <div class="option-description">${description}</div>
+                    <div class="color-selector">
+                        <select class="custom-color-select" data-target="${fieldName}" aria-label="${title}">
+                            <option value="">Pick another color...</option>
+                            ${options}
+                        </select>
+                    </div>
+                </div>
+            `;
+        }
+
+        function appendCustomColorCard(container, fieldName, title, description) {
+            container.insertAdjacentHTML('beforeend', createCustomColorCard(fieldName, title, description));
+        }
+
+        function appendStaticCustomColorCards() {
+            const bandGrid = document.getElementById('bandOptions');
+            const claspGrid = document.getElementById('claspOptions');
+            if (bandGrid) appendCustomColorCard(bandGrid, 'bandColor', 'Other Band Color', 'Pick a color not shown above');
+            if (claspGrid) appendCustomColorCard(claspGrid, 'claspColor', 'Pick a color not shown above');
+        }
+
+        function populateDialOptions() {
+            const container = document.getElementById('dialOptions');
+            container.innerHTML = '';
+            const options = dialOptions[selections.movement] || [];
+            let pictureUploadIndex = 0;
+
+            options.forEach(option => {
+                const label = document.createElement('label');
+                label.className = 'option-card';
+                if (option.type === 'picture') {
+                    label.dataset.pictureUpload = 'true';
+                }
+                const colorBlocks = option.type === 'picture'
+                    ? ''
+                    : (option.colors || [{ name: option.name, hex: option.color || '#c0c0c0' }])
+                        .map(color => {
+                            const name = color.name || color;
+                            const hex = color.hex || color;
+                            return `<span class="color-option" style="background-color: ${hex};" data-color="${name}" title="${name}"></span>`;
+                        })
+                        .join('');
+                const imageContent = option.type === 'picture' ? `
+                    <div class="option-image">
+                        <img src="${encodeSvgDataURI(option.image)}" alt="Picture Dial preview" class="picture-preview">
+                    </div>
+                    <div class="upload-section">
+                        <button type="button" class="picture-upload-button" data-upload-target="dial-upload-${pictureUploadIndex}">
+                            Upload dial image
+                        </button>
+                        <input id="dial-upload-${pictureUploadIndex}" type="file" accept="image/*" class="picture-upload" data-field="dialImage">
+                    </div>
+                ` : '';
+                label.innerHTML = `
+                    <input type="radio" name="dial" value="${option.name}" required>
+                    <div class="option-name">${option.name}</div>
+                    <div class="option-description">${option.type === 'picture' ? 'Custom dial image option' : 'Dial color'}</div>
+                    ${imageContent}
+                    <div class="color-selector">
+                        ${colorBlocks}
+                    </div>
+                `;
+                container.appendChild(label);
+                if (option.type === 'picture') pictureUploadIndex += 1;
+            });
+
+            appendCustomColorCard(container, 'dialColor', 'Other Dial Color', 'Pick a color not shown above');
+        }
+
+        function populateCaseOptions() {
+            const container = document.getElementById('caseOptions');
+            container.innerHTML = '';
+            const options = caseOptions[selections.movement] || [];
+
+            options.forEach(option => {
+                const label = document.createElement('label');
+                label.className = 'option-card';
+                if (option.name === 'Other') {
+                    label.dataset.customOption = 'case';
+                    label.innerHTML = `
+                        <input type="radio" name="case" value="" required>
+                        <div class="option-name">Other</div>
+                        <div class="option-description">Enter a custom case style</div>
+                        <input class="custom-other-input" type="text" placeholder="Type custom case" aria-label="Custom case" />
+                    `;
+                } else {
+                    const colorOptions = option.colors.map(color => {
+                        const colorHex = colorMap[color] || '#c0c0c0';
+                        return `<span class="color-option" style="background-color: ${colorHex};" data-color="${color}" title="${color}"></span>`;
+                    }).join('');
+
+                    label.innerHTML = `
+                        <input type="radio" name="case" value="${option.name}" required>
+                        <div class="option-name">${option.name}</div>
+                        <div class="option-description">Bezel style</div>
+                        <div class="color-selector">
+                            ${colorOptions}
+                        </div>
+                    `;
+                }
+                container.appendChild(label);
+            });
+
+            appendCustomColorCard(container, 'caseColor', 'Other Case Color', 'Pick a color not shown above');
+        }
+
+        function showFrame(frameNum) {
+            // Hide all frames
+            for (let i = 1; i <= totalFrames; i++) {
+                document.getElementById(`frame${i}`).classList.remove('active');
+            }
+
+            // Show current frame
+            document.getElementById(`frame${frameNum}`).classList.add('active');
+
+            // Update buttons
+            document.getElementById('btnBack').disabled = frameNum === 1;
+            document.getElementById('btnNext').style.display = frameNum === totalFrames ? 'none' : 'block';
+            document.getElementById('btnFinalize').style.display = frameNum === totalFrames ? 'block' : 'none';
+
+            // Populate dynamic options
+            if (frameNum === 2) {
+                populateDialOptions();
+            } else if (frameNum === 3) {
+                populateCaseOptions();
+            }
+
+            // Update summaries
+            updateSummaries();
+            updateProgress();
+        }
+
+        function updateSummaries() {
+            // Update movement summaries
+            ['summary-movement', 'summary-movement2', 'summary-movement3', 'summary-movement4'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = selections.movement || '-';
+            });
+
+            // Update dial summaries
+            ['summary-dial', 'summary-dial2', 'summary-dial3'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = selections.dial || '-';
+            });
+
+            // Update case summaries
+            ['summary-case', 'summary-case2'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = selections.case || '-';
+            });
+
+            document.getElementById('summary-band').textContent = selections.band || '-';
+
+            // Update final summary
+            document.getElementById('final-movement').textContent = selections.movement || '-';
+            document.getElementById('final-dial').textContent = selections.dial || '-';
+            document.getElementById('final-case').textContent = selections.case || '-';
+            document.getElementById('final-band').textContent = selections.band || '-';
+            document.getElementById('final-band-color').textContent = selections.bandColor || '-';
+            document.getElementById('final-clasp').textContent = selections.clasp || '-';
+            document.getElementById('final-clasp-color').textContent = selections.claspColor || '-';
+        }
+
+        function getSelectedValue(name) {
+            const selected = document.querySelector(`input[name="${name}"]:checked`);
+            return selected ? selected.value : '';
+        }
+
+        function nextFrame() {
+            const frameMap = {
+                1: 'movement',
+                2: 'dial',
+                3: 'case',
+                4: 'band',
+                5: 'clasp'
+            };
+
+            const fieldName = frameMap[currentFrame];
+            const selectedValue = getSelectedValue(fieldName);
+
+            if (!selectedValue) {
+                alert('Please select an option before proceeding.');
+                return;
+            }
+
+            selections[fieldName] = selectedValue;
+
+            if (currentFrame < totalFrames) {
+                currentFrame++;
+                showFrame(currentFrame);
+            }
+        }
+
+        function previousFrame() {
+            if (currentFrame > 1) {
+                currentFrame--;
+                showFrame(currentFrame);
+            }
+        }
+
+        function finalizeOrder() {
+            const fieldName = 'clasp';
+            const selectedValue = getSelectedValue(fieldName);
+
+            if (!selectedValue) {
+                alert('Please select a clasp option.');
+                return;
+            }
+
+            selections.clasp = selectedValue;
+
+            // Get color selections.
+            const bandCard = document.querySelector('input[name="band"]:checked')?.closest('.option-card');
+            const claspCard = document.querySelector('input[name="clasp"]:checked')?.closest('.option-card');
+            const bandColorEl = bandCard?.querySelector('.color-option.selected');
+            const claspColorEl = claspCard?.querySelector('.color-option.selected');
+            const bandCustomSelect = bandCard?.querySelector('.custom-color-select');
+            const claspCustomSelect = claspCard?.querySelector('.custom-color-select');
+
+            selections.bandColor = bandColorEl?.getAttribute('data-color') || bandCustomSelect?.value || selections.bandColor || '-';
+            selections.claspColor = claspColorEl?.getAttribute('data-color') || claspCustomSelect?.value || selections.claspColor || '-';
+
+            // Persist customizer selections for contact page.
+            const storageFields = ['movement', 'dial', 'case', 'band', 'clasp', 'dialColor', 'caseColor', 'bandColor', 'claspColor', 'dialImage'];
+            storageFields.forEach(field => {
+                const value = selections[field] || '';
+                localStorage.setItem(`quote_${field}`, value);
+            });
+
+            const summaryText = storageFields
+                .map(field => {
+                    if (!selections[field]) return null;
+                    if (field === 'dialImage') return 'Dial Image: Custom Image Uploaded';
+                    return `${field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: ${selections[field]}`;
+                })
+                .filter(Boolean)
+                .join(', ');
+            localStorage.setItem('quote_summary', summaryText);
+
+            // Redirect to contact page with a marker so the contact page can read stored values.
+            window.location.href = 'contact.html?from=customizer';
+        }
+
+        // Add click handlers to option cards and color selectors
+        document.addEventListener('change', function(e) {
+            if (e.target.type === 'radio') {
+                const card = e.target.closest('.option-card');
+                const allCards = card.parentElement.querySelectorAll('.option-card');
+                allCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+            }
+
+            if (e.target.classList.contains('custom-color-select')) {
+                const field = e.target.dataset.target;
+                const selectedColor = e.target.value;
+                selections[field] = selectedColor;
+                const card = e.target.closest('.custom-color-card');
+                const frame = card.closest('.frame');
+                frame?.querySelectorAll('.custom-color-card').forEach(c => c.classList.remove('selected'));
+                if (selectedColor) card.classList.add('selected');
+
+                frame?.querySelectorAll('.color-option.selected').forEach(c => c.classList.remove('selected'));
+                updateSummaries();
+            }
+
+            if (e.target.classList.contains('custom-other-input')) {
+                const card = e.target.closest('.option-card');
+                const radio = card.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.value = e.target.value;
+                    radio.checked = Boolean(e.target.value);
+                }
+                const allCards = card.parentElement.querySelectorAll('.option-card');
+                allCards.forEach(c => c.classList.remove('selected'));
+                if (e.target.value) card.classList.add('selected');
+            }
+
+            if (e.target.classList.contains('picture-upload')) {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const card = e.target.closest('.option-card');
+                    const preview = card.querySelector('.picture-preview');
+                    if (preview) preview.src = event.target.result;
+                    selections.dialImage = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            const uploadButton = e.target.closest('.picture-upload-button');
+            if (uploadButton) {
+                const targetId = uploadButton.dataset.uploadTarget;
+                const input = document.getElementById(targetId);
+                if (input) input.click();
+                return;
+            }
+
+            const pictureCard = e.target.closest('.option-card[data-picture-upload="true"]');
+            if (pictureCard && !e.target.closest('.picture-upload') && !e.target.closest('.color-option') && !e.target.closest('.custom-color-select') && !e.target.matches('input[type="radio"]')) {
+                const input = pictureCard.querySelector('.picture-upload');
+                if (input) input.click();
+                return;
+            }
+
+            if (e.target.classList.contains('color-option')) {
+                const selector = e.target.parentElement;
+                const allColors = selector.querySelectorAll('.color-option');
+                allColors.forEach(c => c.classList.remove('selected'));
+                e.target.classList.add('selected');
+
+                const frame = selector.closest('.frame');
+                frame?.querySelectorAll('.custom-color-card').forEach(c => c.classList.remove('selected'));
+                const customSelect = frame?.querySelector('.custom-color-select');
+                if (customSelect) customSelect.value = '';
+
+                const card = selector.closest('.option-card');
+                const radio = card?.querySelector('input[type="radio"]');
+                const selectedColor = e.target.getAttribute('data-color') || '';
+                if (radio?.name === 'band') {
+                    selections.bandColor = selectedColor;
+                } else if (radio?.name === 'clasp') {
+                    selections.claspColor = selectedColor;
+                }
+                updateSummaries();
+            }
+        });
+
+        // Initialize
+        showFrame(1);
+        appendStaticCustomColorCards();
+    </script>
 
 </body>
 </html>

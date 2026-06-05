@@ -720,6 +720,11 @@ a.service-link {
     border-bottom: 1px solid rgba(209,114,13,0.35);
 }
 
+.contact-customizer-link a:hover {
+    color:#1e7bff;
+    border-bottom-color: #1e7bff;
+}
+
 .submit-feedback {
     margin-top: 1rem;
     font-size: 0.95rem;
@@ -925,6 +930,19 @@ a.service-link {
     margin-top: 0;
     font-size: 1rem;
     color: #263238;
+}
+
+.quote-image {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.quote-image img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 16px;
+    border: 1px solid #dde4eb;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.06);
 }
 
 .thank-you-message {
@@ -1261,6 +1279,20 @@ a.service-link {
         font-size: 1rem;
         letter-spacing: 2px;
         margin-bottom: 0.75rem;
+    }
+
+    footer {
+        padding: 2rem 0;
+        background: #ffffff;
+        border-top: 1px solid #eceff1;
+        color: #546e7a;
+        text-align: center;
+    }
+
+    footer p {
+        margin: 0;
+        font-size: 0.95rem;
+        color: #546e7a;
     }
 
     .brand-story h2 {
