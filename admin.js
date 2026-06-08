@@ -3,6 +3,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const submissionsContainer = document.getElementById('submissionsContainer');
     const logoutButton = document.getElementById('logoutButton');
 
+    if (adminPanel) {
+        adminPanel.classList.remove('hidden');
+    }
+
     let allSubmissions = [];
     let currentFilter = 'all';
 
@@ -463,10 +467,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const result = await response.json();
-            showUploadStatus('Photo uploaded successfully!', 'success');
+            showUploadStatus('Photo uploaded successfully! Reloading admin panel...', 'success');
             fileInput.value = '';
             displayNameInput.value = '';
-            loadGalleryImages();
+            setTimeout(() => window.location.reload(), 800);
         } catch (error) {
             showUploadStatus(`Upload failed: ${error.message}`, 'error');
             console.error('Upload error:', error);
@@ -574,11 +578,11 @@ const images = Array.isArray(data) ? data : data.images || [];
                 throw new Error(error.error || 'Upload failed');
             }
 
-            optimizeStatus.textContent = 'Image uploaded and added to optimization list.';
+            optimizeStatus.textContent = 'Image uploaded and added to optimization list. Reloading admin panel...';
             optimizeStatus.className = 'optimize-status show success';
             optimizeUploadFile.value = '';
             optimizeUploadDescription.value = '';
-            loadOptimizeTargets();
+            setTimeout(() => window.location.reload(), 800);
         } catch (error) {
             optimizeStatus.textContent = `Upload error: ${error.message}`;
             optimizeStatus.className = 'optimize-status show error';

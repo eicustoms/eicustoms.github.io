@@ -246,6 +246,10 @@ app.post('/admin/logout', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.get('/admin', requireAdminSession, (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
 app.get('/admin/login', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin-login.html'));
 });
