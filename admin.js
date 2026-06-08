@@ -1,78 +1,48 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('loginForm');
-    const loginContainer = document.getElementById('loginContainer');
     const adminPanel = document.getElementById('adminPanel');
     const submissionsContainer = document.getElementById('submissionsContainer');
-    const loginError = document.getElementById('loginError');
-    const passwordInput = document.getElementById('passwordInput');
+    const logoutButton = document.getElementById('logoutButton');
 
     let allSubmissions = [];
     let currentFilter = 'all';
 
-    // Check if already authenticated
-    const token = localStorage.getItem('adminToken');
-    if (token) {
-        showAdminPanel();
-        loadSubmissions();
-    }
+    const escapeHtml = text => {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
 
-    // Handle login
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const password = passwordInput.value;
-
-        try {
-            const response = await fetch('/admin/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password })
-            });
-
-            const data = await response.json();
-
-            if (response.ok && data.status === 'ok') {
-                localStorage.setItem('adminToken', data.token);
-                loginError.textContent = '';
-                showAdminPanel();
-                loadSubmissions();
-            } else {
-                loginError.textContent = 'Invalid password. Try again.';
-                passwordInput.value = '';
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async () => {
+            try {
+                await fetch('/admin/logout', { method: 'POST' });
+            } catch (error) {
+                console.error('Logout error:', error);
             }
-        } catch (error) {
-            loginError.textContent = 'Login failed. Please try again.';
-            console.error('Login error:', error);
-        }
-    });
-
-    function showAdminPanel() {
-        loginContainer.classList.add('hidden');
-        adminPanel.classList.remove('hidden');
+            window.location.href = '/admin/login';
+        });
     }
 
-    function logout() {
-        localStorage.removeItem('adminToken');
-        loginContainer.classList.remove('hidden');
-        adminPanel.classList.add('hidden');
-        passwordInput.value = '';
-        submissionsContainer.innerHTML = '';
-        allSubmissions = [];
+    async function logout() {
+        try {
+            await fetch('/admin/logout', { method: 'POST' });
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+        window.location.href = '/admin/login';
     }
 
     async function loadSubmissions() {
-        const token = localStorage.getItem('adminToken');
-
         try {
-            const response = await fetch('/admin/api/submissions', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await fetch('/admin/api/submissions');
 
             if (!response.ok) {
                 if (response.status === 401) {
-                    logout();
-                    return;
+                    return window.location.href = '/admin/login';
                 }
                 throw new Error('Failed to load submissions');
             }
@@ -85,6 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Load error:', error);
         }
     }
+
+    loadSubmissions();
 
     function updateStats() {
         const total = allSubmissions.length;
@@ -126,6 +98,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ${escapeHtml(submission.custom_summary)}
                             </div>
                         ` : ''}
+                        ${submission.custom_dialImage ? `
+                            <div class="custom-image">
+                                <strong>Dial Image:</strong><br>
+                                ${submission.custom_dialImage.startsWith('data:') ? `<img src="${submission.custom_dialImage}" alt="Custom dial image preview">` : `<span>${escapeHtml(submission.custom_dialImage)}</span>`}
+                            </div>
+                        ` : ''}
                         <p class="timestamp">Received: ${new Date(submission.receivedAt).toLocaleString()}</p>
                         
                         <div class="submission-actions">
@@ -156,13 +134,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.updateStatus = async function(submissionId, newStatus) {
-        const token = localStorage.getItem('adminToken');
         try {
             const response = await fetch(`/admin/api/submissions/${submissionId}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ status: newStatus })
             });
@@ -183,14 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirm('Are you sure you want to delete this project? This cannot be undone.')) {
             return;
         }
-
-        const token = localStorage.getItem('adminToken');
         try {
             const response = await fetch(`/admin/api/submissions/${submissionId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                method: 'DELETE'
             });
 
             /*if (!response.ok) {
@@ -207,8 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Refresh submissions every 30 seconds
     setInterval(() => {
-        const token = localStorage.getItem('adminToken');
-        if (token && !adminPanel.classList.contains('hidden')) {
+        if (!adminPanel.classList.contains('hidden')) {
             loadSubmissions();
         }
     }, 30000);
@@ -230,12 +200,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const optimizeUploadFile = document.getElementById('optimizeUploadFile');
     const optimizeUploadDescription = document.getElementById('optimizeUploadDescription');
 
-    // Load gallery, static images, and comments on panel show
+    // Load gallery and comments on panel show
     loadGalleryImages();
-    loadStaticImages();
     loadComments();
     loadOptimizeTargets();
-
 
     galleryUploadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -257,13 +225,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function loadComments() {
-        const token = localStorage.getItem('adminToken');
         try {
             const response = await fetch('/admin/api/comments', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+                            });
 
             if (!response.ok) {
                 throw new Error('Failed to load comments');
@@ -305,7 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function addComment() {
-        const token = localStorage.getItem('adminToken');
         const author = document.getElementById('commentAuthor').value.trim();
         const service = document.getElementById('commentService').value.trim();
         const image = document.getElementById('commentImage').value.trim();
@@ -328,9 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 formData.append('imageFile', imageFile);
                 options = {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
                     body: formData
                 };
             } else {
@@ -338,7 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({ author, service, image, content })
                 };
@@ -365,7 +324,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.saveComment = async function(id) {
-        const token = localStorage.getItem('adminToken');
         const author = document.getElementById(`commentAuthor-${id}`).value.trim();
         const service = document.getElementById(`commentService-${id}`).value.trim();
         const image = document.getElementById(`commentImage-${id}`).value.trim();
@@ -383,9 +341,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 formData.append('imageFile', imageFile);
                 options = {
                     method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
                     body: formData
                 };
             } else {
@@ -393,7 +348,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({ author, service, image, content })
                 };
@@ -418,14 +372,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirm('Delete this comment? This cannot be undone.')) {
             return;
         }
-
-        const token = localStorage.getItem('adminToken');
         try {
             const response = await fetch(`/admin/api/comments/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                method: 'DELETE'
             });
 
             if (!response.ok) {
@@ -450,14 +399,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadGalleryImages() {
-        const token = localStorage.getItem('adminToken');
-
         try {
             const response = await fetch('/admin/api/gallery', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+                            });
 
             if (!response.ok) {
                 throw new Error('Failed to load gallery images');
@@ -490,7 +434,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function uploadGalleryImage() {
-        const token = localStorage.getItem('adminToken');
         const fileInput = document.getElementById('galleryImage');
         const displayNameInput = document.getElementById('displayName');
         const uploadButton = galleryUploadForm.querySelector('button');
@@ -511,9 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/admin/api/gallery/upload', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
                 body: formData
             });
 
@@ -547,14 +487,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirm('Are you sure you want to delete this photo? This cannot be undone.')) {
             return;
         }
-
-        const token = localStorage.getItem('adminToken');
         try {
             const response = await fetch(`/admin/api/gallery/${filename}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                method: 'DELETE'
             });
 
             if (!response.ok) {
@@ -569,14 +504,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     async function loadOptimizeTargets() {
-        const token = localStorage.getItem('adminToken');
-
         try {
             const response = await fetch('/admin/api/optimize-images', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+                            });
 
             if (!response.ok) {
                 throw new Error('Failed to load optimize targets');
@@ -591,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderOptimizeTargets(data) {
-        const images = Array.isArray(data) ? data : (data.images || []);
+const images = Array.isArray(data) ? data : data.images || [];
 
         if (images.length === 0) {
             optimizeList.innerHTML = '<div class="no-gallery-items">No optimization targets configured.</div>';
@@ -599,7 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         optimizeList.innerHTML = images.map(image => `
-            <div class="optimize-target-row" id="optimize-row-${escapeHtml(image.filename)}">
+            <div class="optimize-target-row">
                 <div class="optimize-target-meta">
                     <strong>${escapeHtml(image.filename)}</strong>
                     <div>${escapeHtml(image.description || 'No description')}</div>
@@ -610,18 +540,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         <input type="checkbox" onchange="toggleOptimizeActive(${JSON.stringify(image.filename)}, this.checked)" ${image.active ? 'checked' : ''}>
                         Always optimize
                     </label>
-                    <label style="font-size: 13px; display: flex; align-items: center; gap: 6px;">
-                        Quality:
-                        <input
-                            type="number"
-                            id="quality-${escapeHtml(image.filename)}"
-                            value="${image.quality || 80}"
-                            min="60"
-                            max="95"
-                            style="width: 60px; padding: 2px 4px;"
-                        >
-                    </label>
-                    <button type="button" class="optimize-btn" onclick="saveOptimizeImage(${JSON.stringify(image.filename)})">Save</button>
                     <button type="button" class="optimize-btn" onclick="optimizeTargetNow(${JSON.stringify(image.filename)})">Optimize</button>
                     <button type="button" class="optimize-btn" onclick="deoptimizeTarget(${JSON.stringify(image.filename)})">Deoptimize</button>
                 </div>
@@ -630,11 +548,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function uploadOptimizeImage() {
-        const token = localStorage.getItem('adminToken');
         const file = optimizeUploadFile.files[0];
         const description = optimizeUploadDescription.value.trim();
-        const qualityInput = document.getElementById('optimizeUploadQuality');
-        const quality = qualityInput ? parseInt(qualityInput.value, 10) || 80 : 80;
 
         if (!file) {
             optimizeStatus.textContent = 'Please select an image to upload.';
@@ -645,16 +560,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData();
         formData.append('image', file);
         formData.append('description', description);
-        formData.append('quality', quality);
 
         optimizeStatus.textContent = 'Uploading image...';
         optimizeStatus.className = 'optimize-status show';
         try {
             const response = await fetch('/admin/api/optimize-images/upload', {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
                 body: formData
             });
 
@@ -667,7 +578,6 @@ document.addEventListener('DOMContentLoaded', () => {
             optimizeStatus.className = 'optimize-status show success';
             optimizeUploadFile.value = '';
             optimizeUploadDescription.value = '';
-            if (qualityInput) qualityInput.value = '80';
             loadOptimizeTargets();
         } catch (error) {
             optimizeStatus.textContent = `Upload error: ${error.message}`;
@@ -676,45 +586,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    window.saveOptimizeImage = async function(filename) {
-        const token = localStorage.getItem('adminToken');
-        const qualityInput = document.getElementById(`quality-${filename}`);
-        const quality = qualityInput ? parseInt(qualityInput.value, 10) || 80 : 80;
-
-        try {
-            const response = await fetch(`/admin/api/optimize-images/${encodeURIComponent(filename)}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ quality })
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to save quality setting');
-            }
-
-            optimizeStatus.textContent = `Quality for ${filename} saved successfully.`;
-            optimizeStatus.className = 'optimize-status show success';
-            setTimeout(() => optimizeStatus.classList.remove('show'), 5000);
-            loadOptimizeTargets();
-        } catch (error) {
-            optimizeStatus.textContent = `Save error: ${error.message}`;
-            optimizeStatus.className = 'optimize-status show error';
-            console.error('Save optimize image error:', error);
-        }
-    };
-
     window.toggleOptimizeActive = async function(filename, active) {
-        const token = localStorage.getItem('adminToken');
         try {
             const response = await fetch(`/admin/api/optimize-images/${encodeURIComponent(filename)}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ active })
             });
@@ -732,18 +609,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
-
     window.optimizeTargetNow = async function(filename) {
-        const token = localStorage.getItem('adminToken');
         optimizeStatus.textContent = `Optimizing ${filename}...`;
         optimizeStatus.className = 'optimize-status show';
         try {
             const response = await fetch(`/admin/api/optimize-images/${encodeURIComponent(filename)}/optimize`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                method: 'POST'
             });
 
             if (!response.ok) {
@@ -762,15 +633,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.deoptimizeTarget = async function(filename) {
-        const token = localStorage.getItem('adminToken');
         optimizeStatus.textContent = `Restoring ${filename} from backup...`;
         optimizeStatus.className = 'optimize-status show';
         try {
             const response = await fetch(`/admin/api/optimize-images/${encodeURIComponent(filename)}/deoptimize`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                method: 'POST'
             });
 
             if (!response.ok) {
@@ -789,18 +656,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     async function runOptimizeImages() {
-        const token = localStorage.getItem('adminToken');
-
         optimizeButton.disabled = true;
         optimizeStatus.textContent = 'Running optimization for active images...';
         optimizeStatus.className = 'optimize-status show';
 
         try {
             const response = await fetch('/admin/api/optimize-images', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                method: 'POST'
             });
 
             if (!response.ok) {
@@ -820,130 +682,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
-
-    // Static Images Management
-    const staticImageUploadForm = document.getElementById('staticImageUploadForm');
-    const staticImagesContainer = document.getElementById('staticImagesContainer');
-    const staticUploadStatus = document.getElementById('staticUploadStatus');
-
-    staticImageUploadForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const token = localStorage.getItem('adminToken');
-        const fileInput = document.getElementById('staticImageFile');
-        const filenameInput = document.getElementById('staticImageFilename');
-        const uploadButton = staticImageUploadForm.querySelector('button');
-
-        if (!fileInput.files.length) {
-            showStaticUploadStatus('Please select an image.', 'error');
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('image', fileInput.files[0]);
-        if (filenameInput.value.trim()) {
-            formData.append('filename', filenameInput.value.trim());
-        }
-
-        uploadButton.disabled = true;
-        showStaticUploadStatus('Uploading...', '');
-
-        try {
-            const response = await fetch('/admin/api/static-images/upload', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Upload failed');
-            }
-
-            const result = await response.json();
-            showStaticUploadStatus(`Uploaded as /images/${escapeHtml(result.filename)}`, 'success');
-            fileInput.value = '';
-            filenameInput.value = '';
-            loadStaticImages();
-        } catch (error) {
-            showStaticUploadStatus(`Upload failed: ${error.message}`, 'error');
-            console.error('Static upload error:', error);
-        } finally {
-            uploadButton.disabled = false;
-        }
-    });
-
-    async function loadStaticImages() {
-        const token = localStorage.getItem('adminToken');
-        try {
-            const response = await fetch('/admin/api/static-images', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to load static images');
-            }
-
-            const images = await response.json();
-            renderStaticImages(images);
-        } catch (error) {
-            console.error('Static images load error:', error);
-            staticImagesContainer.innerHTML = `<div class="no-gallery-items">Error loading static images: ${error.message}</div>`;
-        }
-    }
-
-    function renderStaticImages(images) {
-        if (images.length === 0) {
-            staticImagesContainer.innerHTML = '<div class="no-gallery-items">No static images found.</div>';
-            return;
-        }
-
-        staticImagesContainer.innerHTML = images.map(img => `
-            <div class="static-image-card">
-                <img src="images/${escapeHtml(img.filename)}" alt="${escapeHtml(img.filename)}" class="static-image-thumb" onerror="this.style.display='none'">
-                <div class="static-image-info">
-                    <div>${escapeHtml(img.filename)}</div>
-                    <div class="static-image-url">/images/${escapeHtml(img.filename)}</div>
-                </div>
-                <button class="static-image-delete" onclick="deleteStaticImage('${escapeHtml(img.filename)}')">Delete</button>
-            </div>
-        `).join('');
-    }
-
-    function showStaticUploadStatus(message, type) {
-        staticUploadStatus.textContent = message;
-        staticUploadStatus.className = `upload-status show ${type}`.trim();
-        if (type === 'success' || type === 'error') {
-            setTimeout(() => staticUploadStatus.classList.remove('show'), 5000);
-        }
-    }
-
-    window.deleteStaticImage = async function(filename) {
-        if (!confirm(`Delete "${filename}"? This cannot be undone.`)) {
-            return;
-        }
-
-        const token = localStorage.getItem('adminToken');
-        try {
-            const response = await fetch(`/admin/api/static-images/${encodeURIComponent(filename)}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to delete image');
-            }
-
-            loadStaticImages();
-        } catch (error) {
-            alert('Error deleting image: ' + error.message);
-            console.error('Static delete error:', error);
-        }
-    };
-
 });
-
 
 function escapeHtml(text) {
     if (!text) return '';
@@ -951,105 +690,3 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
-
-// Static Images Upload
-document.getElementById('staticImageUploadForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  
-  const fileInput = document.getElementById('staticImageFile');
-  const filenameInput = document.getElementById('staticImageName');
-  const statusDiv = document.getElementById('staticImageStatus');
-  const file = fileInput.files[0];
-  const filename = filenameInput.value.trim();
-
-  if (!file || !filename) {
-    showStatus(statusDiv, 'Please select a file and enter a filename', 'error');
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append('image', file);
-  formData.append('filename', filename);
-
-  try {
-    const response = await fetch('/admin/api/static-images/upload', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-      },
-      body: formData
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      showStatus(statusDiv, data.error || 'Upload failed', 'error');
-      return;
-    }
-
-    showStatus(statusDiv, `✓ Uploaded: ${data.filename}`, 'success');
-    fileInput.value = '';
-    filenameInput.value = '';
-    loadStaticImages();
-  } catch (error) {
-    console.error('Upload error:', error);
-    showStatus(statusDiv, 'Upload failed: ' + error.message, 'error');
-  }
-});
-
-async function loadStaticImages() {
-  const container = document.getElementById('staticImagesContainer');
-  
-  try {
-    const response = await fetch('/admin/api/static-images', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-      }
-    });
-
-    if (!response.ok) return;
-
-    const images = await response.json();
-
-    if (images.length === 0) {
-      container.innerHTML = '<div class="no-gallery-items">No static images uploaded yet</div>';
-      return;
-    }
-
-    container.innerHTML = images.map(img => `
-      <div class="gallery-item-card">
-        <img src="/images/${img.filename}" alt="${img.filename}" class="gallery-item-image">
-        <div class="gallery-item-info">${img.filename}</div>
-        <button class="gallery-item-delete" onclick="deleteStaticImage('${img.filename}')">Delete</button>
-      </div>
-    `).join('');
-  } catch (error) {
-    console.error('Failed to load static images:', error);
-  }
-}
-
-async function deleteStaticImage(filename) {
-  if (!confirm(`Delete ${filename}?`)) return;
-
-  try {
-    const response = await fetch(`/admin/api/static-images/${filename}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-      }
-    });
-
-    if (!response.ok) {
-      alert('Failed to delete image');
-      return;
-    }
-
-    loadStaticImages();
-  } catch (error) {
-    console.error('Delete error:', error);
-    alert('Failed to delete image');
-  }
-}
-
-// Load static images on page load
-loadStaticImages();

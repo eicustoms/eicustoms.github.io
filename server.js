@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 const sharp = require('sharp');
@@ -24,6 +25,9 @@ const galleryMetadataFile = path.join(dataDir, 'gallery-metadata.json');
 const commentsFile = path.join(dataDir, 'homepage-comments.json');
 const imagesDir = path.join(dataDir, 'images');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD; // Change this!
+const ADMIN_SESSION_COOKIE = 'adminSession';
+const COOKIE_MAX_AGE = 24 * 60 * 60 * 1000; // 1 day
+const SESSION_SECRET = process.env.SESSION_SECRET || 'please-change-this-secret';
 
 const ensureDataPaths = () => {
   if (!fs.existsSync(dataDir)) {
@@ -42,6 +46,7 @@ const initializeApp = async () => {
     try {
       await initDb();
       setPool(pool);
+      await pool.query(`ALTER TABLE submissions ADD COLUMN IF NOT EXISTS custom_dialImage TEXT`);
       console.log('✓ Database initialized');
     } catch (error) {
       console.error('Database initialization failed:', error);
@@ -80,6 +85,59 @@ const transporter = nodemailer.createTransport({
 app.use(express.json());
 app.use('/images', express.static(imagesDir));
 app.use(express.static(path.join(__dirname)));
+
+const parseCookies = (cookieHeader = '') => {
+  return cookieHeader.split(';').reduce((cookies, pair) => {
+    const [name, ...value] = pair.trim().split('=');
+    if (!name || value.length === 0) return cookies;
+    cookies[name] = decodeURIComponent(value.join('='));
+    return cookies;
+  }, {});
+};
+
+const signPayload = (payload) => {
+  return crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
+};
+
+const createSessionToken = () => {
+  const payload = JSON.stringify({ exp: Date.now() + COOKIE_MAX_AGE });
+  const encoded = Buffer.from(payload, 'utf8').toString('base64');
+  return `${encoded}.${signPayload(encoded)}`;
+};
+
+const verifySessionToken = (token) => {
+  if (!token) return false;
+  const parts = token.split('.');
+  if (parts.length !== 2) return false;
+  const [encoded, signature] = parts;
+  if (signPayload(encoded) !== signature) return false;
+
+  try {
+    const payload = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
+    return payload.exp && payload.exp > Date.now();
+  } catch (err) {
+    return false;
+  }
+};
+
+const getSessionTokenFromRequest = (req) => {
+  const cookies = parseCookies(req.headers.cookie || '');
+  return cookies[ADMIN_SESSION_COOKIE];
+};
+
+const requireAdminSession = (req, res, next) => {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
+    return res.redirect('/admin/login');
+  }
+  next();
+};
+
+const requireAdminApiAuth = (req, res, next) => {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+};
 
 // Helper function to send email
 const sendEmail = async (submission) => {
@@ -131,11 +189,11 @@ app.post('/api/contact', async (req, res) => {
     if (pool) {
       // Use database
       await pool.query(
-        `INSERT INTO submissions (id, name, email, phone, message, custom_case, custom_bezel, custom_dial, custom_strap, custom_summary, received_at, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        `INSERT INTO submissions (id, name, email, phone, message, custom_case, custom_bezel, custom_dial, custom_strap, custom_dialImage, custom_summary, received_at, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
         [submission.id, submission.name, submission.email, submission.phone, submission.message,
          submission.custom_case, submission.custom_bezel, submission.custom_dial, submission.custom_strap,
-         submission.custom_summary, submission.receivedAt, submission.status]
+         submission.custom_dialImage, submission.custom_summary, submission.receivedAt, submission.status]
       );
     } else {
       // Fallback to file-based storage
@@ -167,19 +225,36 @@ app.post('/api/contact', async (req, res) => {
 // Protected admin login endpoint
 app.post('/admin/login', (req, res) => {
   const { password } = req.body;
-  
+
   if (password === ADMIN_PASSWORD) {
-    res.json({ status: 'ok', token: 'authenticated' });
-  } else {
-    res.status(401).json({ status: 'error', message: 'Invalid password' });
+    const token = createSessionToken();
+    res.cookie(ADMIN_SESSION_COOKIE, token, {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: COOKIE_MAX_AGE,
+      path: '/'
+    });
+    return res.json({ status: 'ok' });
   }
+
+  res.status(401).json({ status: 'error', message: 'Invalid password' });
 });
+
+app.post('/admin/logout', (req, res) => {
+  res.clearCookie(ADMIN_SESSION_COOKIE, { path: '/' });
+  res.json({ status: 'ok' });
+});
+
+app.get('/admin/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin-login.html'));
+});
+
+app.use('/admin/api', requireAdminApiAuth);
 
 // Protected admin submissions endpoint
 app.get('/admin/api/submissions', async (req, res) => {
-  const token = req.headers.authorization;
-  
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -206,9 +281,7 @@ app.get('/admin/api/submissions', async (req, res) => {
 
 // Update submission status
 app.patch('/admin/api/submissions/:id', async (req, res) => {
-  const token = req.headers.authorization;
-  
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -256,9 +329,7 @@ app.patch('/admin/api/submissions/:id', async (req, res) => {
 
 // Delete submission
 app.delete('/admin/api/submissions/:id', async (req, res) => {
-  const token = req.headers.authorization;
-  
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -302,7 +373,7 @@ app.delete('/admin/api/submissions/:id', async (req, res) => {
 });
 
 // Serve admin page
-app.get('/admin', (req, res) => {
+app.get('/admin', requireAdminSession, (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
@@ -325,8 +396,7 @@ app.get('/api/comments', async (req, res) => {
 });
 
 app.get('/admin/api/comments', async (req, res) => {
-  const token = req.headers.authorization;
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -363,8 +433,7 @@ const processCommentImageUpload = async (file) => {
 };
 
 app.post('/admin/api/comments', (req, res) => {
-  const token = req.headers.authorization;
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -422,8 +491,7 @@ app.post('/admin/api/comments', (req, res) => {
 });
 
 app.patch('/admin/api/comments/:id', (req, res) => {
-  const token = req.headers.authorization;
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -488,8 +556,7 @@ app.patch('/admin/api/comments/:id', (req, res) => {
 });
 
 app.delete('/admin/api/comments/:id', async (req, res) => {
-  const token = req.headers.authorization;
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -527,9 +594,7 @@ app.delete('/admin/api/comments/:id', async (req, res) => {
 
 // Get all gallery images metadata
 app.get('/admin/api/gallery', async (req, res) => {
-  const token = req.headers.authorization;
-  
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -552,15 +617,13 @@ app.get('/admin/api/gallery', async (req, res) => {
   }
 });
 
-app.get('/admin/api/optimize-images', async (req, res) => {
-  const token = req.headers.authorization;
-  if (token !== `Bearer authenticated`) {
+app.get('/admin/api/optimize-images', (req, res) => {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
-    const images = await getOptimizeCandidates();
-    res.json({ images });
+    res.json({ images: getOptimizeCandidates() });
   } catch (error) {
     console.error('Failed to load optimization candidates:', error);
     res.status(500).json({ error: 'Failed to load optimization candidates' });
@@ -568,8 +631,7 @@ app.get('/admin/api/optimize-images', async (req, res) => {
 });
 
 app.post('/admin/api/optimize-images', async (req, res) => {
-  const token = req.headers.authorization;
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -583,8 +645,7 @@ app.post('/admin/api/optimize-images', async (req, res) => {
 });
 
 app.post('/admin/api/optimize-images/upload', upload.single('image'), async (req, res) => {
-  const token = req.headers.authorization;
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -613,38 +674,35 @@ app.post('/admin/api/optimize-images/upload', upload.single('image'), async (req
     fs.writeFileSync(targetPath, req.file.buffer);
     const description = req.body.description ? req.body.description.trim() : '';
     const active = req.body.active !== 'false';
-    const quality = req.body.quality ? parseInt(req.body.quality, 10) : 80;
-    await addOptimizeImage(filename, description, active, quality);
+    await addOptimizeImage(filename, description, active);
 
     if (active) {
-      await optimizeSingleImage(filename, quality);
+      await optimizeSingleImage(filename);
     }
 
     res.json({ status: 'ok', filename });
   } catch (error) {
     console.error('Image upload optimization failed:', error);
-    res.status(500).json({ error: error.message || 'Image upload optimization failed' });
+    res.status(500).json({ error: 'Image upload optimization failed' });
   }
 });
 
 app.patch('/admin/api/optimize-images/:filename', async (req, res) => {
-  const token = req.headers.authorization;
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const filename = path.basename(req.params.filename);
-  const { active, description, quality } = req.body;
+  const { active, description } = req.body;
 
   try {
-    const updated = await updateOptimizeImage(filename, {
+    const updated = updateOptimizeImage(filename, {
       active: typeof active === 'boolean' ? active : undefined,
-      description: typeof description === 'string' ? description : undefined,
-      quality: quality !== undefined ? quality : undefined
+      description: typeof description === 'string' ? description : undefined
     });
 
     if (updated.active) {
-      await optimizeSingleImage(filename, updated.quality || 80);
+      await optimizeSingleImage(filename);
     }
 
     res.json({ status: 'ok', image: updated });
@@ -654,10 +712,8 @@ app.patch('/admin/api/optimize-images/:filename', async (req, res) => {
   }
 });
 
-
 app.post('/admin/api/optimize-images/:filename/optimize', async (req, res) => {
-  const token = req.headers.authorization;
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -673,8 +729,7 @@ app.post('/admin/api/optimize-images/:filename/optimize', async (req, res) => {
 });
 
 app.post('/admin/api/optimize-images/:filename/deoptimize', async (req, res) => {
-  const token = req.headers.authorization;
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -712,9 +767,7 @@ app.get('/api/gallery', async (req, res) => {
 
 // Upload a new gallery image
 app.post('/admin/api/gallery/upload', upload.single('image'), async (req, res) => {
-  const token = req.headers.authorization;
-  
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -773,239 +826,7 @@ app.post('/admin/api/gallery/upload', upload.single('image'), async (req, res) =
 
 // Delete a gallery image
 app.delete('/admin/api/gallery/:filename', async (req, res) => {
-  const token = req.headers.authorization;
-  
-  if (token !== `Bearer authenticated`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const filename = path.basename(req.params.filename);
-  const filepath = path.join(imagesDir, filename);
-
-  try {
-    if (pool) {
-      // Delete from database
-      const result = await pool.query(
-        'DELETE FROM gallery_metadata WHERE filename = $1 RETURNING filename',
-        [filename]
-      );
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Gallery image not found' });
-      }
-    } else {
-      // Delete from file-based storage
-      if (fs.existsSync(galleryMetadataFile)) {
-        const raw = fs.readFileSync(galleryMetadataFile, 'utf8');
-        const metadata = raw ? JSON.parse(raw) : [];
-        const filtered = metadata.filter(item => item.filename !== filename);
-        
-        if (filtered.length === metadata.length) {
-          return res.status(404).json({ error: 'Gallery image not found' });
-        }
-        
-        fs.writeFileSync(galleryMetadataFile, JSON.stringify(filtered, null, 2));
-      }
-    }
-
-    // Delete the actual image file
-    if (fs.existsSync(filepath)) {
-      fs.unlinkSync(filepath);
-    }
-
-    console.log('Deleted gallery image:', filename);
-    res.json({ status: 'ok' });
-  } catch (error) {
-    console.error('Failed to delete gallery image:', error);
-    res.status(500).json({ error: 'Failed to delete gallery image' });
-  }
-});
-// Get all static images
-app.get('/admin/api/static-images', async (req, res) => {
-  const token = req.headers.authorization;
-  
-  if (token !== `Bearer authenticated`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  try {
-    const files = fs.readdirSync(imagesDir);
-    const staticImages = files.map(filename => ({
-      filename: filename,
-      url: `/images/${filename}`
-    }));
-    res.json(staticImages);
-  } catch (error) {
-    console.error('Failed to load static images:', error);
-    res.status(500).json({ error: 'Failed to load static images' });
-  }
-});
-
-// Upload static image
-app.post('/admin/api/static-images/upload', upload.single('image'), async (req, res) => {
-  const token = req.headers.authorization;
-  
-  if (token !== `Bearer authenticated`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  if (!req.file) {
-    return res.status(400).json({ error: 'No image provided' });
-  }
-
-  try {
-    const filename = req.body.filename || path.basename(req.file.originalname);
-    const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '-');
-    const filepath = path.join(imagesDir, safeName);
-
-    fs.writeFileSync(filepath, req.file.buffer);
-
-    res.json({ status: 'ok', filename: safeName, url: `/images/${safeName}` });
-  } catch (error) {
-    console.error('Failed to upload static image:', error);
-    res.status(500).json({ error: 'Failed to upload static image' });
-  }
-});
-
-// Delete static image
-app.delete('/admin/api/static-images/:filename', async (req, res) => {
-  const token = req.headers.authorization;
-  
-  if (token !== `Bearer authenticated`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const filename = path.basename(req.params.filename);
-  const filepath = path.join(imagesDir, filename);
-
-// List all static images
-app.get('/admin/api/static-images', (req, res) => {
-  const token = req.headers.authorization;
-
-  if (token !== `Bearer authenticated`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  try {
-    const files = fs.readdirSync(imagesDir);
-    const images = files
-      .filter(f => /\.(jpe?g|png|gif|webp|svg)$/i.test(f))
-      .map(f => {
-        const stat = fs.statSync(path.join(imagesDir, f));
-        return { filename: f, size: stat.size, uploadedAt: stat.mtime.toISOString() };
-      })
-      .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-    res.json(images);
-  } catch (error) {
-    console.error('Failed to list static images:', error);
-    res.status(500).json({ error: 'Failed to list static images' });
-  }
-});
-
-// Upload static images (logo, eitan, etc.)
-app.post('/admin/api/static-images/upload', upload.single('image'), async (req, res) => {
-  const token = req.headers.authorization;
-
-  if (token !== `Bearer authenticated`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  if (!req.file) {
-    return res.status(400).json({ error: 'No image provided' });
-  }
-
-  try {
-    // Use custom filename if provided, otherwise fall back to original name
-    const rawName = (req.body.filename && req.body.filename.trim())
-      ? req.body.filename.trim()
-      : path.basename(req.file.originalname);
-    const safeName = rawName.replace(/[^a-zA-Z0-9._-]/g, '-');
-    const filepath = path.join(imagesDir, safeName);
-
-    // Save the image as-is (no resizing for static assets)
-    fs.writeFileSync(filepath, req.file.buffer);
-
-    res.json({ status: 'ok', filename: safeName, url: `/images/${safeName}` });
-  } catch (error) {
-    console.error('Failed to upload static image:', error);
-    res.status(500).json({ error: 'Failed to upload static image' });
-  }
-});
-
-// Delete a static image
-app.delete('/admin/api/static-images/:filename', (req, res) => {
-  const token = req.headers.authorization;
-
-  if (token !== `Bearer authenticated`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const filename = path.basename(req.params.filename);
-  const filepath = path.join(imagesDir, filename);
-
-  try {
-    if (!fs.existsSync(filepath)) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-
-    fs.unlinkSync(filepath);
-    console.log('Deleted static image:', filename);
-    res.json({ status: 'ok' });
-  } catch (error) {
-    console.error('Failed to delete static image:', error);
-    res.status(500).json({ error: 'Failed to delete static image' });
-  }
-});
-
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  if (!process.env.EMAIL_USER) {
-    console.log('⚠️  Email notifications not configured. Set EMAIL_USER and EMAIL_PASSWORD env vars.');
-  }
-});
-  try {
-    if (!fs.existsSync(filepath)) {
-      return res.status(404).json({ error: 'Image not found' });
-    }
-
-    fs.unlinkSync(filepath);
-    console.log('Deleted static image:', filename);
-    res.json({ status: 'ok' });
-  } catch (error) {
-    console.error('Failed to delete static image:', error);
-    res.status(500).json({ error: 'Failed to delete static image' });
-  }
-});
-// Upload static images (logo, eitan, etc.)
-app.post('/admin/api/static-images/upload', upload.single('image'), async (req, res) => {
-  const token = req.headers.authorization;
-  
-  if (token !== `Bearer authenticated`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  if (!req.file) {
-    return res.status(400).json({ error: 'No image provided' });
-  }
-
-  try {
-    const originalName = path.basename(req.file.originalname);
-    const safeName = originalName.replace(/[^a-zA-Z0-9._-]/g, '-');
-    const filepath = path.join(imagesDir, safeName);
-
-    // Save the image as-is (no resizing for static assets)
-    fs.writeFileSync(filepath, req.file.buffer);
-
-    res.json({ status: 'ok', filename: safeName, url: `/images/${safeName}` });
-  } catch (error) {
-    console.error('Failed to upload static image:', error);
-    res.status(500).json({ error: 'Failed to upload static image' });
-  }
-});
-// Delete a gallery image
-app.delete('/admin/api/gallery/:filename', async (req, res) => {
-  const token = req.headers.authorization;
-  
-  if (token !== `Bearer authenticated`) {
+  if (!verifySessionToken(getSessionTokenFromRequest(req))) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -1049,3 +870,4 @@ app.listen(PORT, () => {
     console.log('⚠️  Email notifications not configured. Set EMAIL_USER and EMAIL_PASSWORD env vars.');
   }
 });
+
