@@ -2,11 +2,51 @@ document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const selections = Object.fromEntries(params.entries());
 
+    const isDataURI = value => typeof value === 'string' && value.startsWith('data:');
+    const markerValue = 'Custom Image Uploaded';
     const knownFields = ['case', 'bezel', 'dial', 'strap', 'movement', 'dialColor', 'caseColor', 'bandColor', 'claspColor', 'dialImage'];
+
+    const getStoredValue = (field) => {
+        const directKeys = {
+            case: ['quote_case'],
+            bezel: ['quote_bezel'],
+            dial: ['quote_dial'],
+            strap: ['quote_strap', 'quote_band'],
+            movement: ['quote_movement'],
+            dialColor: ['quote_dialColor'],
+            caseColor: ['quote_caseColor'],
+            bandColor: ['quote_bandColor'],
+            claspColor: ['quote_claspColor'],
+            dialImage: ['quote_dialImageData', 'quote_dialImage']
+        };
+
+        const candidates = directKeys[field] || [];
+        for (const key of candidates) {
+            const sessionValue = sessionStorage.getItem(key);
+            if (sessionValue) return sessionValue;
+            const localValue = localStorage.getItem(key);
+            if (localValue) return localValue;
+        }
+        return '';
+    };
+
     knownFields.forEach(field => {
         if (!selections[field]) {
-            const stored = localStorage.getItem(`quote_${field}`);
-            if (stored) selections[field] = stored;
+            const storedValue = getStoredValue(field);
+
+            if (field === 'dialImage') {
+                const imageValue = sessionStorage.getItem('quote_dialImageData') || localStorage.getItem('quote_dialImageData') || localStorage.getItem('quote_dialImage');
+                const statusValue = localStorage.getItem('quote_dialImageStatus');
+                if (isDataURI(imageValue)) {
+                    selections[field] = imageValue;
+                } else if (storedValue && isDataURI(storedValue)) {
+                    selections[field] = storedValue;
+                } else if (statusValue === markerValue || storedValue === markerValue) {
+                    selections[field] = markerValue;
+                }
+            } else if (storedValue) {
+                selections[field] = storedValue;
+            }
         }
     });
 
@@ -64,14 +104,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (inputs.caseColor) inputs.caseColor.value = selections.caseColor || '';
         if (inputs.bandColor) inputs.bandColor.value = selections.bandColor || '';
         if (inputs.claspColor) inputs.claspColor.value = selections.claspColor || '';
-        if (inputs.dialImage) inputs.dialImage.value = selections.dialImage || '';
+        if (inputs.dialImage) inputs.dialImage.value = selections.dialImage && selections.dialImage.startsWith('data:') ? selections.dialImage : '';
         if (inputs.summary) inputs.summary.value = summaryTextValue;
         const summaryElement = document.getElementById('quote-summary');
         const imageContainer = document.getElementById('quote-image-container');
         if (summaryElement) summaryElement.textContent = summaryTextValue;
         if (imageContainer) {
             imageContainer.innerHTML = '';
-            if (selections.dialImage) {
+            if (selections.dialImage && selections.dialImage.startsWith('data:')) {
                 const img = document.createElement('img');
                 img.src = selections.dialImage;
                 img.alt = 'Custom dial image preview';

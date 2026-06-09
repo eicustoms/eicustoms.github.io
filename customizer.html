@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Watch Customizer | Ethan Watches</title>
+    <title>Watch Customizer | Ethan & Isaac Customs</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="full-page-layout">
@@ -1223,6 +1223,8 @@
                 const value = selections[field] || '';
                 localStorage.setItem(`quote_${field}`, value);
             });
+            localStorage.setItem('quote_strap', selections.band || '');
+            localStorage.setItem('quote_bezel', selections.case || '');
 
             if (selections.dialImage) {
                 try {
