@@ -469,7 +469,7 @@ a.service-link {
     /* New CSS Animation Slider */
     display: flex; /* Use flexbox for a single row */
     width: fit-content; /* Make the container as wide as its content */
-    animation: scroll 500s linear infinite; /* The continuous scroll animation */
+    animation: scroll 200s linear infinite; /* The continuous scroll animation */
     margin: 0 auto;
 }
 
