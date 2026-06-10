@@ -177,6 +177,46 @@ Received at: ${submission.receivedAt}
   }
 };
 
+const DATA_URI_MAX_CHARS = 2_500_000; // tweak as needed (characters in the data URI string)
+
+function isDataUri(value) {
+  return typeof value === 'string' && value.startsWith('data:image/');
+}
+
+function dataUriToBuffer(dataUri) {
+  // data:[mime];base64,<base64>
+  const base64 = dataUri.split(',')[1] || '';
+  return Buffer.from(base64, 'base64');
+}
+
+async function compressDialImageIfNeeded(dialImageDataUri) {
+  if (!isDataUri(dialImageDataUri)) return dialImageDataUri;
+
+  const mime = dialImageDataUri.split(';')[0].slice('data:'.length); // e.g. image/jpeg, image/png, image/gif
+
+  // Skip GIF
+  if (mime === 'image/gif') return dialImageDataUri;
+
+  // Only attempt compression for JPEG/PNG
+  if (mime !== 'image/jpeg' && mime !== 'image/png') return dialImageDataUri;
+
+  // If not too large, keep original
+  if (dialImageDataUri.length <= DATA_URI_MAX_CHARS) return dialImageDataUri;
+
+  const inputBuffer = dataUriToBuffer(dialImageDataUri);
+
+  // Heuristic: resize down and re-encode as JPEG progressive
+  // (Prevents giant base64 strings from being stored/rendered)
+  const outputBuffer = await sharp(inputBuffer)
+    .rotate()
+    .resize({ width: 1400, height: 1400, fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 75, progressive: true })
+    .toBuffer();
+
+  const outputBase64 = outputBuffer.toString('base64');
+  return `data:image/jpeg;base64,${outputBase64}`;
+}
+
 app.post('/api/contact', async (req, res) => {
   const submission = {
     id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
@@ -194,6 +234,13 @@ app.post('/api/contact', async (req, res) => {
       submission.quote_dialImage;
   }
 
+    try {
+    if (submission.custom_dialImage) {
+      submission.custom_dialImage = await compressDialImageIfNeeded(submission.custom_dialImage);
+    }
+  } catch (e) {
+    console.error('Dial image compression failed; saving original:', e.message);
+  }
 
   try {
     if (pool) {
