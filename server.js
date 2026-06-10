@@ -82,7 +82,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-app.use(express.json());
+app.use(express.json({limit:'10mb'}));
 app.use('/images', express.static(imagesDir));
 app.use(express.static(path.join(__dirname)));
 
