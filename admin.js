@@ -136,7 +136,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ${escapeHtml(submission.custom_summary)}
                             </div>
                         ` : ''}
-                        ${renderDialImageBlock(submission.custom_dialImage)}
+                        ${(() => {
+  const img =
+    submission.custom_dialImage ||
+    submission.custom_dialimage ||
+    submission.quote_dialImageData ||
+    submission.quote_dialImage ||
+    submission.custom_fields?.dialImage;
+
+  return renderDialImageBlock(img);
+})()}
+
 
                         <p class="timestamp">Received: ${new Date(submission.receivedAt).toLocaleString()}</p>
                         
