@@ -185,6 +185,16 @@ app.post('/api/contact', async (req, res) => {
     status: 'pending'
   };
 
+  // Backend compatibility: normalize dial image into custom_dialImage
+  if (!submission.custom_dialImage) {
+    submission.custom_dialImage =
+      (submission.custom_fields && submission.custom_fields.dialImage) ||
+      submission.dialImage ||
+      submission.quote_dialImageData ||
+      submission.quote_dialImage;
+  }
+
+
   try {
     if (pool) {
       // Use database
