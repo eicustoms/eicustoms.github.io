@@ -219,6 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Gallery Management
     const galleryUploadForm = document.getElementById('galleryUploadForm');
+
     const galleryContainer = document.getElementById('galleryContainer');
     const uploadStatus = document.getElementById('uploadStatus');
     let allGalleryImages = [];
@@ -555,7 +556,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderOptimizeTargets(data) {
-const images = Array.isArray(data) ? data : data.images || [];
+        // Normalize so `images.map(...)` never crashes
+        let images = [];
+        if (Array.isArray(data)) {
+            images = data;
+        } else if (data && Array.isArray(data.images)) {
+            images = data.images;
+        }
+
 
         if (images.length === 0) {
             optimizeList.innerHTML = '<div class="no-gallery-items">No optimization targets configured.</div>';
