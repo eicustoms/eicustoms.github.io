@@ -8,6 +8,125 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preload" as="image" href="/images/eitan1.jpg">
     <link rel="preload" as="image" href="/images/herowatch.jpg">
+        <style>
+                .comments-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #eee;
+        }
+
+        .comment-form {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 30px;
+            border: 1px dashed #ddd;
+        }
+
+        .comment-form label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .comment-form input,
+        .comment-form textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        .comment-form textarea {
+            min-height: 120px;
+        }
+
+        .comment-form button {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .comment-form button:hover {
+            background: #764ba2;
+        }
+
+        .comment-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .comment-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .comment-card h3 {
+            margin: 0 0 10px;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .comment-card label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .comment-card input,
+        .comment-card textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        .comment-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .comment-actions button {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .comment-actions .save-comment {
+            background: #2e7d32;
+            color: white;
+        }
+
+        .comment-actions .save-comment:hover {
+            background: #27632a;
+        }
+
+        .comment-actions .delete-comment {
+            background: #d32f2f;
+            color: white;
+        }
+
+        .comment-actions .delete-comment:hover {
+            background: #b71c1c;
+        }
+    </style>
 </head>
 <body class="has-hero-image">
 
@@ -83,6 +202,30 @@
                             No testimonials available yet.
                         </div>
                     </div>
+                </div>
+                <div class="comments-section">
+                    <h2>Add Your Own Testimonials / Comments</h2>
+                    <div class="comment-status" id="commentStatus"></div>
+                        <form id="commentForm" class="comment-form">
+                            <label for="commentAuthor">Name</label>
+                            <input type="text" id="commentAuthor" name="author" placeholder="Client name" required>
+
+                            <label for="commentService">Service</label>
+                            <input type="text" id="commentService" name="service" placeholder="Service type - What we did for you" required>
+
+                            <label for="commentImage">Image URL (optional)</label>
+                            <input type="text" id="commentImage" name="image" placeholder="file:// or https://... Can be left blank, or .jpg, .jpeg, or .png files">
+
+                            <label for="commentImageFile">Upload Image (optional)</label>
+                            <input type="file" id="commentImageFile" name="imageFile" accept="image/jpeg,image/png,image/jpg">
+
+                            <label for="commentContent">Quote</label>
+                            <textarea id="commentContent" name="content" placeholder="Comments" required></textarea>
+
+                            <button type="submit">Add Comment</button>
+                        </form>
+                    </div>
+                    <script src="admin.js"></script>
                 </div>
             </div>
         </section>
