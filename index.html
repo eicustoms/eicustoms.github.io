@@ -328,9 +328,10 @@ async function loadComments() {
             document.getElementById('commentContent').value = '';
             showCommentStatus(alert("Your comment was added successfully!", "Congratulations!"), 'success');
             loadComments();
+            reload();
         } catch (error) {
             console.error('Add comment error:', error);
-            showCommentStatus(`Error: ${error.message}`, 'error');
+            showCommentStatus(alert(`Error: ${error.message}`), 'error');
         }
     }
 
