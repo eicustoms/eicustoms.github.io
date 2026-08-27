@@ -326,7 +326,7 @@ async function loadComments() {
             document.getElementById('commentImage').value = '';
             document.getElementById('commentImageFile').value = '';
             document.getElementById('commentContent').value = '';
-            showCommentStatus('Comment added successfully.', 'success');
+            showCommentStatus(alert("Message Added"), 'success');
             loadComments();
         } catch (error) {
             console.error('Add comment error:', error);
@@ -408,6 +408,7 @@ async function loadComments() {
             commentStatus.classList.remove('show');
         }, 5000);
     }
+
                     </script>
                 </div>
             </div>
