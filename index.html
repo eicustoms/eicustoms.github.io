@@ -371,7 +371,7 @@ async function loadComments() {
                 throw new Error(error.error || 'Failed to save comment');
             }
 
-            showCommentStatus("Comment Addition Successfull., 'success');
+            showCommentStatus("Comment Addition Successfull.", 'success');
             loadComments();
         } catch (error) {
             console.error('Save comment error:', error);
