@@ -1,0 +1,5 @@
+# Runtime images directory (a mounted volume in production).
+# Canonical copies live in seed-images/ and are synced in on boot.
+/images/
+node_modules/
+.env

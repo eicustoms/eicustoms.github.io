@@ -7,6 +7,7 @@ const nodemailer = require('nodemailer');
 const multer = require('multer');
 const sharp = require('sharp');
 const { pool, initDb } = require('./db');
+const { syncImages } = require('./image-seed');
 const {
   setPool,
   getOptimizeCandidates,
@@ -39,6 +40,9 @@ const ensureDataPaths = () => {
 };
 
 ensureDataPaths();
+// `images/` is a mounted volume in production, so the committed copies in
+// seed-images/ have to be pushed into it on boot. See image-seed.js.
+syncImages(imagesDir);
 
 // Initialize database if DATABASE_URL is set
 const initializeApp = async () => {
