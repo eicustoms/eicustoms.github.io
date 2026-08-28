@@ -1,0 +1,7 @@
+[
+  {
+    "id": "2026-08-28-herowatch-rename",
+    "description": "The homepage hero was replaced in git: the previous herowatch.jpg was renamed to herowatch2.jpg and a new herowatch.jpg took its place. The images volume still held the old file, so force both names back in sync with seed-images/.",
+    "replaceFromSeed": ["herowatch.jpg", "herowatch2.jpg"]
+  }
+]

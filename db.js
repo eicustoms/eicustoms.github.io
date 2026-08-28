@@ -10,7 +10,9 @@ if (process.env.DATABASE_SSL === 'true') {
   poolOptions.ssl = { rejectUnauthorized: false };
 }
 
-const pool = new Pool(poolOptions);
+// Only create a pool when a DATABASE_URL is configured; otherwise the app
+// falls back to file-based storage (server.js checks `if (pool)`).
+const pool = process.env.DATABASE_URL ? new Pool(poolOptions) : null;
 
 const initDb = async () => {
   const client = await pool.connect();
