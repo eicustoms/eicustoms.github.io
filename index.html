@@ -282,7 +282,7 @@ async function addComment() {
             document.getElementById('commentImageFile').value = '';
             document.getElementById('commentContent').value = '';
             showCommentStatus(alert("Your comment was added successfully!"), 'success');
-            reload();
+            window.reload();
         } catch (error) {
             console.error('Add comment error:', error);
             showCommentStatus(alert(`Error:  ${error.message}`), 'error');
