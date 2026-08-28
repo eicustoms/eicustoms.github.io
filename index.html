@@ -288,6 +288,13 @@ async function addComment() {
             showCommentStatus(alert(`Error:  ${error.message}`), 'error');
         }
     }
+    function showCommentStatus(message, type) {
+        commentStatus.textContent = message;
+        commentStatus.className = `upload-status show ${type}`;
+        setTimeout(() => {
+            commentStatus.classList.remove('show');
+        }, 5000);
+    }
                     </script>
                 </div>
             </div>
