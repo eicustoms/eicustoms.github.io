@@ -30,6 +30,20 @@ const ADMIN_SESSION_COOKIE = 'adminSession';
 const COOKIE_MAX_AGE = 24 * 60 * 60 * 1000; // 1 day
 const SESSION_SECRET = process.env.SESSION_SECRET || 'please-change-this-secret';
 
+// Twilio SMS (only active when env vars are set)
+let twilioClient = null;
+if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+  try {
+    const Twilio = require('twilio');
+    twilioClient = new Twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+  } catch (err) {
+    console.warn('Twilio module not available, SMS disabled.');
+    twilioClient = null;
+  }
+}
+const SMS_TO = process.env.CONTACT_SMS_TO || '+18483335057';
+const SMS_FROM = process.env.TWILIO_FROM_NUMBER || process.env.TWILIO_PHONE_NUMBER || null;
+
 const ensureDataPaths = () => {
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
@@ -279,6 +293,19 @@ app.post('/api/contact', async (req, res) => {
   
   // Send email notification
   sendEmail(submission);
+
+  // Send SMS via Twilio if configured
+  if (twilioClient && SMS_FROM) {
+    const text = `New Contact: ${submission.name || 'visitor'}\nPhone: ${submission.phone || 'n/a'}\nMessage: ${submission.message || ''}\nSummary: ${submission.custom_summary || ''}`;
+    try {
+      await twilioClient.messages.create({ body: text, from: SMS_FROM, to: SMS_TO });
+      console.log('SMS notification sent');
+    } catch (err) {
+      console.error('Failed to send SMS:', err);
+    }
+  } else {
+    console.log('Twilio not configured; skipping SMS notification');
+  }
 
   res.json({ status: 'ok' });
 });
@@ -935,4 +962,3 @@ app.listen(PORT, () => {
     console.log('⚠️  Email notifications not configured. Set EMAIL_USER and EMAIL_PASSWORD env vars.');
   }
 });
-
