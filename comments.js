@@ -1,8 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const testimonialsGrid = document.getElementById('testimonialsGrid');
 
-  // Toggle to switch to manual slider mode for testing.
-  // State is saved in localStorage under 'manualCommentsSlider'.
+  // Small toggle stays for testing but default behavior is preserved visually.
   const controlsWrapper = document.createElement('div');
   controlsWrapper.style.display = 'flex';
   controlsWrapper.style.alignItems = 'center';
@@ -64,51 +63,46 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (!manualMode()) {
-      // original behavior: render all testimonials statically
-      testimonialsGrid.innerHTML = comments.map(comment => `
-            <div class="testimonial-item">
-                <img src="${escapeHtml(comment.image || 'images/logo.png')}" alt="${escapeHtml(comment.author)}" class="testimonial-photo">
-                <blockquote>${escapeHtml(comment.content)}</blockquote>
-                <p class="testimonial-author">- ${escapeHtml(comment.author)}</p>
-                <span class="testimonial-service">${escapeHtml(comment.service || 'Client')}</span>
-            </div>
-        `).join('');
-      return;
-    }
-
-    // Manual slider mode (all items visible in a horizontally scrollable strip)
-    // Render items into a container that supports horizontal drag + dots navigation.
-    const containerId = 'manualTestimonialsContainer';
-    const controlsId = 'manualTestimonialsDots';
-
-    const itemsHtml = comments.map((comment, i) => `
-      <div class="testimonial-slide" data-index="${i}" style="min-width:280px; max-width:90%; box-sizing:border-box; padding:12px; scroll-snap-align:center; flex: 0 0 auto;">
-        <div style="background:#fff; border:1px solid #eee; border-radius:8px; padding:16px; height:100%; box-shadow:0 1px 2px rgba(0,0,0,0.03)">
-          <img src="${escapeHtml(comment.image || 'images/logo.png')}" alt="${escapeHtml(comment.author)}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;float:left;margin-right:12px;">
-          <div style="overflow:hidden;">
-            <blockquote style="margin:0 0 8px 0;">${escapeHtml(comment.content)}</blockquote>
-            <p style="margin:0;font-weight:600;">${escapeHtml(comment.author)}</p>
-            <div style="font-size:12px;color:#666;margin-top:4px;">${escapeHtml(comment.service || 'Client')}</div>
-          </div>
-          <div style="clear:both"></div>
-        </div>
+    // Keep original card markup exactly as before, but wrap them in a horizontal container when manual mode is enabled.
+    const cardHtml = comments.map(comment => `
+      <div class="testimonial-item" data-index="${escapeHtml(comment.id || '')}" style="box-sizing:border-box;">
+          <img src="${escapeHtml(comment.image || 'images/logo.png')}" alt="${escapeHtml(comment.author)}" class="testimonial-photo">
+          <blockquote>${escapeHtml(comment.content)}</blockquote>
+          <p class="testimonial-author">- ${escapeHtml(comment.author)}</p>
+          <span class="testimonial-service">${escapeHtml(comment.service || 'Client')}</span>
       </div>
     `).join('');
 
-    const wrapperHtml = `
-      <div id="${containerId}" style="display:flex; gap:12px; overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-snap-type:x mandatory; padding-bottom:8px;">
-        ${itemsHtml}
+    if (!manualMode()) {
+      // original static rendering (no layout change to cards)
+      testimonialsGrid.innerHTML = cardHtml;
+      return;
+    }
+
+    // Manual mode: keep the same card HTML but place them inside a horizontally scrollable wrapper
+    const wrapperId = 'manualTestimonialsWrapper';
+    const dotsId = 'manualTestimonialsDots';
+
+    testimonialsGrid.innerHTML = `
+      <div id="${wrapperId}" style="display:flex; gap:12px; overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-snap-type:x mandatory; padding-bottom:8px;">
+        ${cardHtml}
       </div>
-      <div id="${controlsId}" style="display:flex; justify-content:center; gap:8px; margin-top:8px;">
+      <div id="${dotsId}" style="display:flex; justify-content:center; gap:8px; margin-top:8px;">
       </div>
     `;
 
-    testimonialsGrid.innerHTML = wrapperHtml;
+    const wrapper = document.getElementById(wrapperId);
+    const slides = Array.from(wrapper.children); // these are the same .testimonial-item elements
+    const dotsContainer = document.getElementById(dotsId);
 
-    const container = document.getElementById(containerId);
-    const dotsContainer = document.getElementById(controlsId);
-    const slides = Array.from(container.querySelectorAll('.testimonial-slide'));
+    // Make sure each slide has scroll-snap-align and consistent sizing without altering internal markup
+    slides.forEach(s => {
+      s.style.flex = '0 0 auto';
+      s.style.scrollSnapAlign = 'center';
+      // give a sensible min width so cards remain readable
+      s.style.minWidth = '280px';
+      s.style.maxWidth = '90%';
+    });
 
     // create dots
     dotsContainer.innerHTML = '';
@@ -124,10 +118,12 @@ document.addEventListener('DOMContentLoaded', () => {
       dot.style.background = idx === 0 ? '#333' : '#ddd';
       dot.style.padding = '0';
       dot.style.cursor = 'pointer';
+      dot.style.transition = 'background 150ms ease';
 
       dot.addEventListener('click', () => {
-        // smooth scroll the slide into center view
-        s.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        // center the corresponding slide
+        const target = slides[idx];
+        if (target) target.scrollIntoView({ behavior: 'smooth', inline: 'center' });
       });
 
       dotsContainer.appendChild(dot);
@@ -135,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // update active dot based on closest slide to center
     function updateActiveDot() {
-      const containerRect = container.getBoundingClientRect();
+      const containerRect = wrapper.getBoundingClientRect();
       const containerCenter = containerRect.left + containerRect.width / 2;
       let closestIndex = 0;
       let closestDistance = Infinity;
@@ -149,50 +145,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-      // highlight dot
       const dots = Array.from(dotsContainer.children);
       dots.forEach((d, i) => d.style.background = i === closestIndex ? '#333' : '#ddd');
     }
 
-    // Drag-to-scroll (pointer events)
+    // Drag-to-scroll behavior using pointer events
     let isDown = false;
-    let startX;
-    let scrollLeft;
+    let startX = 0;
+    let scrollLeft = 0;
 
-    container.addEventListener('pointerdown', (e) => {
+    wrapper.style.cursor = 'grab';
+
+    wrapper.addEventListener('pointerdown', (e) => {
       isDown = true;
-      container.setPointerCapture(e.pointerId);
+      wrapper.setPointerCapture(e.pointerId);
       startX = e.clientX;
-      scrollLeft = container.scrollLeft;
-      container.style.cursor = 'grabbing';
+      scrollLeft = wrapper.scrollLeft;
+      wrapper.style.cursor = 'grabbing';
     });
 
-    container.addEventListener('pointermove', (e) => {
+    wrapper.addEventListener('pointermove', (e) => {
       if (!isDown) return;
-      const walk = startX - e.clientX; // positive when moving left
-      container.scrollLeft = scrollLeft + walk;
+      const walk = startX - e.clientX;
+      wrapper.scrollLeft = scrollLeft + walk;
     });
 
-    container.addEventListener('pointerup', (e) => {
+    wrapper.addEventListener('pointerup', (e) => {
       isDown = false;
-      try { container.releasePointerCapture(e.pointerId); } catch (err) {}
-      container.style.cursor = 'grab';
-      // snap to nearest
+      try { wrapper.releasePointerCapture(e.pointerId); } catch (err) {}
+      wrapper.style.cursor = 'grab';
       snapToNearest();
     });
-    container.addEventListener('pointerleave', () => {
+
+    wrapper.addEventListener('pointerleave', () => {
       if (isDown) {
         isDown = false;
-        container.style.cursor = 'grab';
+        wrapper.style.cursor = 'grab';
         snapToNearest();
       }
     });
 
-    // mouse wheel should scroll horizontally on Shift or trackpad naturally; no extra
-
-    // Snap to nearest slide after user interaction
     function snapToNearest() {
-      const containerRect = container.getBoundingClientRect();
+      const containerRect = wrapper.getBoundingClientRect();
       const containerCenter = containerRect.left + containerRect.width / 2;
       let closest = slides[0];
       let closestDistance = Infinity;
@@ -205,20 +199,19 @@ document.addEventListener('DOMContentLoaded', () => {
           closest = s;
         }
       });
-      closest.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      if (closest) closest.scrollIntoView({ behavior: 'smooth', inline: 'center' });
     }
 
-    // Update active dot on scroll (throttle)
+    // update active dot on scroll (throttled)
     let scrollTimer = null;
-    container.addEventListener('scroll', () => {
+    wrapper.addEventListener('scroll', () => {
       if (scrollTimer) clearTimeout(scrollTimer);
       scrollTimer = setTimeout(() => {
         updateActiveDot();
       }, 80);
     });
 
-    // initial set
-    container.style.cursor = 'grab';
+    // initial highlight
     updateActiveDot();
   }
 
